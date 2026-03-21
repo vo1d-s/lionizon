@@ -1,0 +1,115 @@
+.list-item.game-card.game-tile .game-card-link {
+    position: relative !important;
+}
+
+.list-item.game-card.game-tile .game-card-link::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: transparent !important;
+    border-radius: 12px !important;
+    z-index: -1 !important;
+    transition: inset 0.1s ease, background 0.1s ease !important;
+}
+
+.list-item.game-card.game-tile .game-card-container:hover .game-card-link::before {
+    background: #272930 !important;
+    inset: -10px !important; /* expands in all directions */
+}
+
+.tab-pane.game-subplaces {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    gap: 16px !important;
+    margin-top: 20px !important;
+}
+
+.tab-pane.game-subplaces.active {
+    display: grid !important;
+}
+
+.subplace-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    background: #272930 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    padding: 10px !important;
+}
+
+.subplace-thumbnail {
+    width: 100% !important;
+    border-radius: 6px !important;
+    margin-bottom: 5px !important;
+}
+
+.subplace-id {
+    font-size: 13px !important;
+    color: #a3a3a3 !important;
+    margin-bottom: 10px;
+}
+
+.mini-playbtn-subplace {
+    color: #f7f7f8 !important;
+    border-color: transparent !important;
+    background: #335fff !important;
+    margin-top: auto;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.mini-playbtn-thumbnail {
+    color: #f7f7f8 !important;
+    border-color: transparent !important;
+    background: #335fff !important;
+    margin-top: auto;
+    height: 30px;
+    width: 100%;
+    border-radius: 8px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+}
+
+.mini-playbtn-thumbnail span {
+    display: flex;
+    align-items: center;
+}
+
+
+.game-card-container {
+    overflow: visible !important;
+    position: relative !important;
+}
+
+/* normal game card */
+.extra-btns-wrapper {
+    width: 100% !important;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.05s ease;
+    pointer-events: none;
+    flex-shrink: 0;
+    height: 30px;
+}
+
+.game-card-link {
+    height: auto !important; /* let it grow naturally */
+}
+
+.game-card-link:hover .extra-btns-wrapper {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* retarded game card (they added delay for some reason) */
+.list-item.hover-game-tile .extra-btns-wrapper {
+    transition: opacity 0.15s ease 0s;
+}
+
+.list-item.hover-game-tile:hover .extra-btns-wrapper {
+    opacity: 1;
+    pointer-events: all;
+    transition: opacity 0.15s ease 0.2s;
+}

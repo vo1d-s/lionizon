@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Roblox UTILS Dev",
+  "version": "1.0",
+  "permissions": ["webRequest", "storage", "alarms", "cookies", "declarativeNetRequest", "declarativeNetRequestWithHostAccess"],
+  "host_permissions": [
+    "https://friends.roblox.com/*",
+    "https://presence.roblox.com/*",
+    "https://*.roblox.com/*"
+  ],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.roblox.com/*"],
+      "run_at": "document_start",
+      "css": [
+        "css/cal-heatmap.css",
+        "css/main-ui.css",
+        "css/pages/games.css"
+      ],
+      "js": [
+        "lib/d3.v7.min.js",
+        "lib/cal-heatmap.min.js",
+        "lib/popper.min.js",
+        "lib/tooltip.min.js",
+        "lib/chart.umd.js",
+        "utils/roblox_api.js",
+        "utils/misc.js",
+        "scripts/pages/home.js",
+        "scripts/pages/games.js",
+        "scripts/pages/fast_buttons.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["scripts/pages/inject.js"],
+      "matches": ["*://*.roblox.com/*"]
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  }
+}

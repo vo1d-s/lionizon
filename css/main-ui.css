@@ -1,0 +1,25 @@
+.rbx-nav-collapse {
+    display: none !important;
+}
+
+.rbx-left-col {
+	width: 185px !important;
+	display: block !important ;
+	visibility: visible !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+}
+
+.rbx-left-col .rbx-scrollbar {
+	width: 185px !important;
+}
+
+#container-main {
+    margin-left: 185px !important;
+}
+
+.friend-carousel-container {
+    background: #191a1f;
+    border-radius: 20px;
+    padding: 10px 10px 0 10px;
+}
