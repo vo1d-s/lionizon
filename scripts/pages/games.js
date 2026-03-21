@@ -258,11 +258,27 @@ if (window.location.href.includes("/games/")) {
     setInterval(updateGameDetails, gameDetailsUpdateSecs * 1000)
 
 
+    function waitForServerId(id, timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            if (server_list.find(s => s.id.includes(id))) return resolve(server_list.find(s => s.id.includes(id)));
 
+            const start = Date.now();
+            const interval = setInterval(() => {
+                const found = server_list.find(s => s.id.includes(id));
+                if (found) {
+                    clearInterval(interval);
+                    resolve(found);
+                } else if (Date.now() - start > timeout) {
+                    clearInterval(interval);
+                    reject(`Timeout waiting for server ${id}`);
+                }
+            }, 100);
+        });
+    }
 
     const observed = new WeakSet();
 
-    function handleServerElement(el) {
+    async function handleServerElement(el) {
         console.log("Server element:", el);
 
         const serverIdText = el.querySelector(".game-server-details .server-id-text");
@@ -271,7 +287,12 @@ if (window.location.href.includes("/games/")) {
 
         let shortServerId = serverIdText.textContent.replace("ID:", "").trim()
 
-        const serverId = server_list.find(s => s.id.includes(shortServerId) )
+        let serverInfo = await waitForServerId(shortServerId)
+        const serverId = serverInfo["id"]
+        const serverPing = serverInfo["ping"]
+        const serverFps = serverInfo["fps"]
+
+        console.log("AAAAAAAAAAAAAAAAAAAAAAA", shortServerId, serverId, serverPing, serverFps)
 
         const serverDetails = el.querySelector(".game-server-details")
         const joinInfo = joinInstanceInfo(pageGameId, [])
