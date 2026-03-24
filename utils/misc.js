@@ -1,23 +1,24 @@
 const extensionName = chrome.runtime.getManifest().name
 
-async function loadData(name) {
+async function loadData(name, defaultValue = {}) {
     const result = await chrome.storage.local.get(name);
-    let data = result[name] || {}
-    console.log(`${extensionName}:`, "Data loaded for", name, data)
-    return data
+    const data = result[name] ?? defaultValue;
+
+    log("Data loaded for", name, data);
+    return data;
 }
 
 async function saveData(data) {
   await chrome.storage.local.set(data);
-  console.log(`${extensionName}:`, "Data saved.")
+  log("Data saved.")
 }
 
 function observeElement(selector, callback) {
-    console.log(`${extensionName}:`,`Started observer for ${selector}`)
+    log(`Started observer for ${selector}`)
     const observer = new MutationObserver((mutations, obs) => {
         const element = document.querySelector(selector);
         if (element) {
-            console.log(`${extensionName}:`,`Found element ${selector}, disconnecting observer...`)
+            log(`Found element ${selector}, disconnecting observer...`)
             obs.disconnect();
             callback(element);
         }
@@ -50,3 +51,13 @@ function observeAdded(selector, callback, parent = document) {
 
     observer.observe(parent, { childList: true, subtree: true, attributes: true })
 }
+
+
+const log = (...args) => {
+    console.log(
+        "%cLionizon%c:", 
+        "color: #ff9900; font-weight: bold;", 
+        "", 
+        ...args
+    );
+};

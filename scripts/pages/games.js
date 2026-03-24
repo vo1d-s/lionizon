@@ -1,54 +1,197 @@
 const gameDetailsUpdateSecs = 2.5
 
-download_roblox_dialog = `<div data-state="open" class="foundation-web-dialog-overlay padding-y-medium foundation-web-portal-zindex bg-common-backdrop" style="pointer-events: auto;"><div role="dialog" id="radix-3" aria-describedby="radix-5" aria-labelledby="radix-4" data-state="open" class="relative radius-large bg-surface-100 stroke-muted stroke-standard foundation-web-dialog-content shadow-transient-high install-dialog" data-size="Large" tabindex="-1" style="pointer-events: auto;"><div class="absolute foundation-web-dialog-close-container"><button type="button" class="foundation-web-close-affordance flex stroke-none bg-none cursor-pointer relative clip group/interactable focus-visible:outline-focus disabled:outline-none bg-over-media-100 padding-medium radius-circle" aria-label="Close"><div role="presentation" class="absolute inset-[0] transition-colors group-hover/interactable:bg-[var(--color-state-hover)] group-active/interactable:bg-[var(--color-state-press)] group-disabled/interactable:bg-none"></div><span role="presentation" class="grow-0 shrink-0 basis-auto icon icon-regular-x size-[var(--icon-size-large)]"></span></button></div><div class="padding-x-xlarge padding-top-xlarge padding-bottom-xlarge content-default"><div class="flex flex-col gap-xlarge padding-xlarge"><div class="flex flex-col gap-xsmall"><h2 id="radix-4" class="text-heading-medium content-emphasis padding-none">Thanks for downloading Roblox</h2><p class="text-body-large">Just follow the steps below to install Roblox. Download should start in a few seconds. If it doesn't, <a href="https://www.roblox.com/download/client?os=win" class="download-link-underline">restart the download</a>.</p></div><div></div> <div class="flex gap-xxlarge"><section class="flex flex-col gap-large grow basis-0"><h3 class="text-title-large content-emphasis padding-none">Install Instructions</h3><ol class="download-instructions-list flex flex-col gap-xlarge margin-none padding-left-large text-body-medium"><li class="padding-left-medium">Once downloaded, double-click the <b>RobloxPlayerInstaller.exe</b> file in your Downloads folder.</li><li class="padding-left-medium">Double-click the <b>RobloxPlayerInstaller</b> to install the app.</li><li class="padding-left-medium">Follow the instructions to install Roblox to your computer.</li><li class="padding-left-medium">Now that it’s installed, <a id="download-join-experience" class="download-link-underline">join the experience</a>.</li></ol></section><div></div> <div class="stroke-standard stroke-default"></div><div></div> <section class="flex flex-col grow basis-0 gap-xxlarge"><div class="flex flex-col gap-small"><h3 class="text-label-large content-emphasis padding-none">Don't forget the mobile app</h3><p class="text-body-medium">Scan this code with your phone's camera to get Roblox.</p></div><div class="flex grow justify-center items-center bg-shift-100 radius-medium padding-x-large"><div class="radius-medium padding-small bg-[white]"><img class="size-2100" src="https://images.rbxcdn.com/79852c254bf43f36.webp" alt=""></div></div></section></div></div></div></div></div>`
-
-function animateCounter(element, from, to, duration = 1000) {
-  const start = performance.now();
-
-  function update(now) {
-    const elapsed = now - start;
-    const progress = Math.min(elapsed / duration, 1);
-
-    // Easing function (ease-out)
-    const eased = 1 - Math.pow(1 - progress, 3);
-
-    const current = Math.round(from + (to - from) * eased);
-    element.textContent = current.toLocaleString(); // formats 200530 → "200,530"
-
-    if (progress < 1) {
-      requestAnimationFrame(update);
-    }
-  }
-
-  requestAnimationFrame(update);
-}
+const IP_API_URL = "https://api-geolocation.juliozapatahernandez2006.workers.dev?ip=";
 
 if (window.location.href.includes("/games/")) { 
+    const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
+    log(`User loaded game ${pageGameId}`)
 
-    let server_list = []
+    /* --------------------------- Server geolocation --------------------------- */
 
-    // content.js
+    const locationCache = {};
+    const locationResolvers = {};
+
+    // fires when server data found
+    function resolveLocation(serverId, value) {
+        locationCache[serverId] = value;
+        if (locationResolvers[serverId]) {
+            locationResolvers[serverId].forEach(resolve => resolve(value));
+            delete locationResolvers[serverId];
+        }
+    }
+
+    // returns a promise that resolves when the location for this server is known
+    // if found, returns, if waits 10s and it isnt there, keep default full text
+    function waitForLocation(serverId, timeout = 10000) {
+        if (locationCache[serverId]) return Promise.resolve(locationCache[serverId]);
+
+        return new Promise((resolve, reject) => {
+            if (!locationResolvers[serverId]) locationResolvers[serverId] = [];
+            locationResolvers[serverId].push(resolve);
+
+            setTimeout(() => reject(`Timeout waiting for location ${serverId}`), timeout);
+        });
+    }
+
+    async function getIPLocation(ip) {
+        if (!ip) return;
+        try {
+            const res = await fetch(`${IP_API_URL}${ip}`);
+            const data = await res.json();
+
+            log("Got ip location", data)
+
+            if (data.results) return data.results;
+        } catch (e) {
+            console.error("IP lookup failed", e);
+        }
+    }
+
+    // this is for servers that arent already saved
+    async function getServerJoinLocation(serverIds) {
+        log("Saved server not found, getting joininfo")
+
+        let geo_db = await loadData("geo_db", {
+            servers: {},
+            addresses: {}
+        });
+
+        // get server gamejoin info, batch request
+        let joinResults = await joinInstanceInfo(pageGameId, serverIds)
+
+        // iterates every joinscript
+        // no joinscript -> return (cannot get info)
+
+        const ipMap = {}; // ip: serverid
+
+        for (let i = 0; i < serverIds.length; i++) {
+            const joinScript = joinResults[i]?.data?.joinScript;
+            if (!joinScript) continue;
+
+            const ip = joinScript.UdmuxEndpoints[0].Address;
+
+            // if ip is already saved get the location
+            if (geo_db.addresses[ip]) {
+                geo_db.servers[serverIds[i]] = { ip, ...geo_db.addresses[ip] };
+                continue;
+            }
+            
+            //if it isnt, add to the list of ips to fetch
+            ipMap[ip] = serverIds[i];
+        }
+        
+        const uncachedIps = Object.keys(ipMap);
+        if (uncachedIps.length > 0) {
+            // fetch locations, comma separated
+            const locations = await getIPLocation(uncachedIps.join(","));
+
+            locations.forEach((loc, i) => {
+                const ip = uncachedIps[i];
+                const serverId = ipMap[ip];
+
+                // if there isnt region just pass the country name
+                const location = loc.region? `${loc.region}, ${loc.country_name}` : loc.country_name;
+
+                // add to db
+                geo_db.servers[serverId] = { ip, location };
+                geo_db.addresses[ip] = { location };
+            });
+        }
+
+        saveData({ geo_db });
+
+        return geo_db.servers;
+    }
+
+    // fetch saved db for server details
+    async function handleServerLocation(serverIds) {
+        if (!serverIds) return;
+
+        const geo_db = await loadData("geo_db", {
+            servers: {},
+            addresses: {}
+        });
+
+        const cached = {};
+        const missing = [];
+
+        // fetches the ones that are missing
+        for (const id of serverIds) {
+            if (geo_db.servers[id]) {
+                cached[id] = geo_db.servers[id];
+            } else {
+                missing.push(id);
+            }
+        }
+
+        const fetched = missing.length > 0 ? await getServerJoinLocation(missing) : {};
+
+        return { ...cached, ...fetched };
+    }   
+
+    // Intercept servers request
     const script = document.createElement("script");
     script.src = chrome.runtime.getURL("scripts/pages/inject.js");
     document.documentElement.appendChild(script);
-    window.addEventListener("message", (event) => {
+
+    // already captured servers
+    let server_list = []
+
+    // when request appears
+    window.addEventListener("message", async (event) => {
         if (event.data.type === "ROBLOX_SERVERS") {
             let servers = event.data.data.data
+
             const existingIds = new Set(server_list.map(s => s.id));
-            const newServers = servers.filter(s => !existingIds.has(s.id));
+            const newServers = servers.filter(s => !existingIds.has(s.id)); // just new servers that appeared
+
+            // adds them to server list
             server_list = [...server_list, ...newServers];
-            console.log("Servers totales:", server_list.length);
+            log("Total shown servers:", server_list.length);
+
+            log(newServers)
+
+            // fetch every location if it isnt saved
+            const locations = await handleServerLocation(newServers.map(s => s.id));
+
+            // sends location for the element to wait
+            for (const [serverId, data] of Object.entries(locations)) {
+                resolveLocation(serverId, data);
+            }
         }
     });
 
-    const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
-    console.log(`${extensionName}: User loaded game ${pageGameId}`)
+    // download roblox dialog but in html for fast launch download
+    download_roblox_dialog = `<div data-state="open" class="foundation-web-dialog-overlay padding-y-medium foundation-web-portal-zindex bg-common-backdrop" style="pointer-events: auto;"><div role="dialog" id="radix-3" aria-describedby="radix-5" aria-labelledby="radix-4" data-state="open" class="relative radius-large bg-surface-100 stroke-muted stroke-standard foundation-web-dialog-content shadow-transient-high install-dialog" data-size="Large" tabindex="-1" style="pointer-events: auto;"><div class="absolute foundation-web-dialog-close-container"><button type="button" class="foundation-web-close-affordance flex stroke-none bg-none cursor-pointer relative clip group/interactable focus-visible:outline-focus disabled:outline-none bg-over-media-100 padding-medium radius-circle" aria-label="Close"><div role="presentation" class="absolute inset-[0] transition-colors group-hover/interactable:bg-[var(--color-state-hover)] group-active/interactable:bg-[var(--color-state-press)] group-disabled/interactable:bg-none"></div><span role="presentation" class="grow-0 shrink-0 basis-auto icon icon-regular-x size-[var(--icon-size-large)]"></span></button></div><div class="padding-x-xlarge padding-top-xlarge padding-bottom-xlarge content-default"><div class="flex flex-col gap-xlarge padding-xlarge"><div class="flex flex-col gap-xsmall"><h2 id="radix-4" class="text-heading-medium content-emphasis padding-none">Thanks for downloading Roblox</h2><p class="text-body-large">Just follow the steps below to install Roblox. Download should start in a few seconds. If it doesn't, <a href="https://www.roblox.com/download/client?os=win" class="download-link-underline">restart the download</a>.</p></div><div></div> <div class="flex gap-xxlarge"><section class="flex flex-col gap-large grow basis-0"><h3 class="text-title-large content-emphasis padding-none">Install Instructions</h3><ol class="download-instructions-list flex flex-col gap-xlarge margin-none padding-left-large text-body-medium"><li class="padding-left-medium">Once downloaded, double-click the <b>RobloxPlayerInstaller.exe</b> file in your Downloads folder.</li><li class="padding-left-medium">Double-click the <b>RobloxPlayerInstaller</b> to install the app.</li><li class="padding-left-medium">Follow the instructions to install Roblox to your computer.</li><li class="padding-left-medium">Now that it’s installed, <a id="download-join-experience" class="download-link-underline">join the experience</a>.</li></ol></section><div></div> <div class="stroke-standard stroke-default"></div><div></div> <section class="flex flex-col grow basis-0 gap-xxlarge"><div class="flex flex-col gap-small"><h3 class="text-label-large content-emphasis padding-none">Don't forget the mobile app</h3><p class="text-body-medium">Scan this code with your phone's camera to get Roblox.</p></div><div class="flex grow justify-center items-center bg-shift-100 radius-medium padding-x-large"><div class="radius-medium padding-small bg-[white]"><img class="size-2100" src="https://images.rbxcdn.com/79852c254bf43f36.webp" alt=""></div></div></section></div></div></div></div></div>`
+
+    function animateCounter(element, from, to, duration = 1000) {
+        const start = performance.now();
+
+        function update(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function (ease-out)
+            const eased = 1 - Math.pow(1 - progress, 3);
+
+            const current = Math.round(from + (to - from) * eased);
+            element.textContent = current.toLocaleString(); // formats 200530 → "200,530"
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    /* ------------------------------- Fast launch ------------------------------ */
 
     if (window.location.href.includes("#fast-join")) {
         history.replaceState(null, "", window.location.pathname)
 
+        // adds custom fast launch dialog
         document.addEventListener("DOMContentLoaded", () => {
-
             document.body.insertAdjacentHTML("beforeend", `
             <div class="foundation-web-dialog-overlay padding-y-medium foundation-web-portal-zindex bg-common-backdrop">
                 <div role="dialog" class="relative radius-large bg-surface-100 stroke-none foundation-web-dialog-content shadow-transient-high download-dialog" data-size="Medium">
@@ -98,7 +241,8 @@ if (window.location.href.includes("/games/")) {
                     closeBtnInstall.addEventListener("click", () => {
                         installDialog.parentElement.remove()
                     })
-
+                    
+                    // download roblox
                     const dl = document.createElement("a")
                     dl.href = "https://www.roblox.com/download/client?os=win"
                     dl.style.display = "none"
@@ -109,6 +253,7 @@ if (window.location.href.includes("/games/")) {
             }, 5000)
 
 
+            // launch game
             const a = document.createElement("a")
             a.href = `roblox://experiences/start?placeId=${pageGameId}`
             a.style.display = "none"
@@ -118,41 +263,35 @@ if (window.location.href.includes("/games/")) {
         })
     }
 
+    /* ------------------------------ Playtime map ------------------------------ */
+
     observeElement(".game-description-container", async () => {
         const container = document.querySelector(".game-description-container")
         
-        // Add elements 
-
         let t = document.createElement("h3")
         t.textContent = "Playtime History"
         container.appendChild(t)
 
-        // Get data
-
+        // load data
         let playtime_data = await loadData("ext_playtime_data")
         playtime_data = playtime_data[pageGameId] || {}
 
+        // playtime history, also formatted in the cal format
         let history = playtime_data["history"] || {}
         let formatted_history = Object.entries(history).map(([date, value]) => ({ date, value }))
 
-        console.log(history, formatted_history)
+        log(`Got playtime data`, playtime_data)
 
-        console.log(`${extensionName}: Got playtime data`, playtime_data)
-
-        // Generate heatmap
-
-        // Generate heatmap
         const today = new Date();
         const timeOffset = new Date(today.getFullYear() - 1, today.getMonth() + 1,8);
 
-        // Wrapper (flex row: labels + heatmap)
         const wrapper = document.createElement("div");
         wrapper.style.cssText = "display: flex; align-items: flex-start;";
 
-        // Left day labels (Mon, Wed, Fri)
+        // day labels on the left
         const dayLabels = document.createElement("div");
-        const cellSize = 13.25 + 2; // width + gutter
-        const labelTopPadding = 22; // accounts for month label height at top
+        const cellSize = 13.25 + 2;
+        const labelTopPadding = 22;
         dayLabels.style.cssText = `
             display: flex;
             flex-direction: column;
@@ -179,7 +318,6 @@ if (window.location.href.includes("/games/")) {
         wrapper.appendChild(heatmap);
         container.appendChild(wrapper);
 
-        // Paint
         let cal = new CalHeatmap();
         cal.paint(
             {
@@ -226,10 +364,7 @@ if (window.location.href.includes("/games/")) {
         );
     })
 
-
-
-
-
+    /* ----------------------------- Live game stats ---------------------------- */
 
     async function updateGameDetails() {
         let details = await getGameDetails(pageGameId)
@@ -258,23 +393,33 @@ if (window.location.href.includes("/games/")) {
     setInterval(updateGameDetails, gameDetailsUpdateSecs * 1000)
 
 
+    /* ------------------------- More server logic lmao ------------------------- */
 
+    // wait for full server id in server_list
+    function waitForServerId(id, timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            if (server_list.find(s => s.id.includes(id))) return resolve(server_list.find(s => s.id.includes(id)));
 
-    const observed = new WeakSet();
+            const start = Date.now();
+            const interval = setInterval(() => {
+                const found = server_list.find(s => s.id.includes(id));
+                if (found) {
+                    clearInterval(interval);
+                    resolve(found);
+                } else if (Date.now() - start > timeout) {
+                    clearInterval(interval);
+                    reject(`Timeout waiting for server ${id}`);
+                }
+            }, 100);
+        });
+    }
 
-    function handleServerElement(el) {
-        console.log("Server element:", el);
+    // when server element appears
+    async function handleServerElement(el) {
+        log("Server element added/changed:", el);
 
+        // if id (text) changes, refetch
         const serverIdText = el.querySelector(".game-server-details .server-id-text");
-        if (!serverIdText || observed.has(serverIdText)) return;
-        observed.add(serverIdText);
-
-        let shortServerId = serverIdText.textContent.replace("ID:", "").trim()
-
-        const serverId = server_list.find(s => s.id.includes(shortServerId) )
-
-        const serverDetails = el.querySelector(".game-server-details")
-        const joinInfo = joinInstanceInfo(pageGameId, [])
 
         let lastText = serverIdText.textContent;
 
@@ -287,18 +432,71 @@ if (window.location.href.includes("/games/")) {
         });
 
         observer.observe(serverIdText, { childList: true, subtree: true, characterData: true });
+
+        let shortServerId = serverIdText.textContent.replace("ID:", "").trim()
+
+        let serverInfo = await waitForServerId(shortServerId)
+        const serverId = serverInfo["id"]
+        const serverPing = serverInfo["ping"]
+        const serverFps = serverInfo["fps"]
+
+        serverIdText.textContent = `ID: ${serverId}`
+
+        const serverDetails = el.querySelector(".game-server-details")
+
+        let infoWrapper = serverDetails.querySelector(".info-wrapper")
+        if (!infoWrapper) {
+            infoWrapper = document.createElement("div")
+            infoWrapper.classList.add("info-wrapper")
+            infoWrapper.innerHTML = `
+            <p class="server-ping">Ping: ${serverPing}ms</p>
+            <p class="server-fps">FPS: ${serverFps}</p>
+            <p class="server-location">Full server</p>
+            `
+            serverDetails.querySelector("span").prepend(infoWrapper)
+        }
+
+        const serverLocEl = infoWrapper.querySelector(".server-location")
+
+        try {
+            const serverLocation = await waitForLocation(serverId);
+            serverLocEl.textContent = serverLocation.location ?? "Full server";
+        } catch (e) {
+            serverLocEl.textContent = "Full server";
+        }
     }
+
+    //let normalizeTimer = null;
+    //function normalizeServerCardHeights() {
+    //    clearTimeout(normalizeTimer);
+    //    normalizeTimer = setTimeout(() => {
+    //        const cards = [...document.querySelectorAll("#rbx-public-game-server-item-container .rbx-public-game-server-item .card-item")];
+//
+    //        for (let i = 0; i < cards.length; i += 4) {
+    //            const row = cards.slice(i, i + 4);
+    //            row.forEach(card => card.style.height = "");
+    //            const tallest = Math.max(...row.map(card => card.offsetHeight));
+    //            row.forEach(card => card.setAttribute("style", `height: ${tallest}px !important`));
+    //        }
+    //    }, 300);
+    //}
 
     observeElement("#rbx-public-game-server-item-container", (container) => {
         container.querySelectorAll(".rbx-public-game-server-item .card-item").forEach(handleServerElement);
-        observeAdded(".rbx-public-game-server-item .card-item", handleServerElement, container);
+        observeAdded(".rbx-public-game-server-item .card-item", (el) => {
+            handleServerElement(el)
+            //normalizeServerCardHeights()
+        }, container);
     });
 
-    // Subplaces Tab
+    /* ------------------------------ Subplaces tab ----------------------------- */
+
+    // wait for nav tabs where about, server, etc is
     observeElement(".nav.nav-tabs", async () => {
         const navTabs = document.querySelector(".nav.nav-tabs")
         const tabContents = document.querySelector(".tab-content.rbx-tab-content")
 
+        // add subplaces tab
         navTabs.insertAdjacentHTML("beforeend", `
             <li id="tab-game-subplaces" class="rbx-tab tab-game-subplaces">
                 <a class="rbx-tab-heading" href="#game-subplaces">
@@ -307,16 +505,16 @@ if (window.location.href.includes("/games/")) {
             </li>
         `)
 
+        // the panel needed where subplaces appear
         tabContents.insertAdjacentHTML("beforeend", `
-        
         <div class="tab-pane game-subplaces" id="game-subplaces">
         </div>
-
         `)
-
+        
         let subplacesPane = tabContents.querySelector(".tab-pane.game-subplaces")
         subplacesPane.style.display="none !important"
 
+        // get every subplace
         let subplaces_list = await getSubplacesFromGame(pageGameId)
         subplaces_list.forEach(async (subplace) => {
             let subplaceName = subplace["name"]
@@ -333,14 +531,15 @@ if (window.location.href.includes("/games/")) {
                 <p class="subplace-id">${subplaceId}</p>
                 <button type="button" class="mini-playbtn-subplace"><span class="icon-common-play"></span></button>
             `
+
+            // play button, launch roblox
             const play_btn = panel.querySelector(".mini-playbtn-subplace")
             play_btn.addEventListener("click", () => {
                 window.location.href = `roblox://experiences/start?placeId=${subplaceId}`
             })
         })
 
-
-
+        // if init hash is
         if (window.location.hash === "#game-subplaces" || window.location.hash === "#!/game-subplaces") {
             tabContents.querySelectorAll(".tab-pane").forEach(tab => {
                 tab.classList.remove("active")
@@ -351,10 +550,7 @@ if (window.location.href.includes("/games/")) {
             subplacesPane.style.display = "none !important"
         }
 
-        if (window.location.hash === "#game-instances" || window.location.hash === "#!/game-instances") {
-            //await serverDetails()
-        }
-
+        // if hash changes to
         window.addEventListener("hashchange", async () => {
             if (window.location.hash === "#game-subplaces" || window.location.hash === "#!/game-subplaces") {
                 tabContents.querySelectorAll(".tab-pane").forEach(tab => {
@@ -365,13 +561,7 @@ if (window.location.href.includes("/games/")) {
             } else {
                 subplacesPane.style.display = "none !important"
             }
-
-            if (window.location.hash === "#game-instances" || window.location.hash === "#!/game-instances") {
-                await serverDetails()
-            }
         })
         
     })
-    
-
 }

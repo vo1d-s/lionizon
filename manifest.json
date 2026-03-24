@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Roblox UTILS Dev",
+  "name": "Lionizon",
   "version": "1.0",
   "permissions": ["webRequest", "storage", "alarms", "cookies", "declarativeNetRequest", "declarativeNetRequestWithHostAccess"],
   "host_permissions": [
     "https://friends.roblox.com/*",
     "https://presence.roblox.com/*",
-    "https://*.roblox.com/*"
+    "*://*.roblox.com/*"
   ],
   "background": {
     "service_worker": "scripts/background.js"

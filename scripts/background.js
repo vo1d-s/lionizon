@@ -31,7 +31,7 @@ async function savePlaytime() {
         }
 
         playtimeData[rootPlaceId]["total_min"] += savePlaytimeInterval
-        console.log(`${extensionName}: Updating playtime | ${lastLocation} - ${playtimeData[rootPlaceId]["total_min"]}`)
+        log(`Updating playtime | ${lastLocation} - ${playtimeData[rootPlaceId]["total_min"]}`)
 
         // Daily playtime logic
 
@@ -48,7 +48,7 @@ async function savePlaytime() {
         playtimeData[rootPlaceId]["history"][today] += savePlaytimeInterval
     }
 
-    console.log(`${extensionName}: Current presence`, presence)
+    log(`Current presence`, presence)
     await saveData({ "ext_playtime_data": playtimeData })
 }
 

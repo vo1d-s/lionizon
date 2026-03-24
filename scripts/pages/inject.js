@@ -1,4 +1,3 @@
-// ===== FETCH =====
 const originalFetch = window.fetch;
 
 window.fetch = async (...args) => {
@@ -6,7 +5,6 @@ window.fetch = async (...args) => {
         ? args[0]
         : args[0]?.url;
 
-    // ⛔ Ignorar requests de la extensión
     if (url && url.includes("_extreq")) {
         return originalFetch(...args);
     }
@@ -26,8 +24,6 @@ window.fetch = async (...args) => {
     return res;
 };
 
-
-// ===== XHR =====
 const origOpen = XMLHttpRequest.prototype.open;
 const origSend = XMLHttpRequest.prototype.send;
 
@@ -37,8 +33,6 @@ XMLHttpRequest.prototype.open = function(method, url, ...rest) {
 };
 
 XMLHttpRequest.prototype.send = function(...args) {
-
-    // ⛔ Ignorar si es de la extensión
     if (this._url && this._url.includes("_extreq")) {
         return origSend.apply(this, args);
     }

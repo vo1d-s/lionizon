@@ -113,3 +113,20 @@
     pointer-events: all;
     transition: opacity 0.15s ease 0.2s;
 }
+
+/*.rbx-public-game-server-item .card-item {
+    min-height: 362px !important;
+}*/
+
+.info-wrapper {
+    margin-top: 10px !important;
+}
+
+.info-wrapper * {
+    font-size: 14px !important;
+}
+
+.game-server-details .server-id-text {
+    text-align: center !important;
+    font-size: 9px !important;
+}

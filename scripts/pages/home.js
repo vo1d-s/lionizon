@@ -88,7 +88,7 @@ if (window.location.href.includes("/home")) {
 
             // Only fires if this user's status actually changed
             if (previousGame !== currentGame) {
-                console.log(`${userId} changed: ${previousGame} → ${currentGame}`, user_status)
+                log(`${userId} changed: ${previousGame} → ${currentGame}`, user_status)
                 previousStates.set(userId, currentGame)
             }
 
