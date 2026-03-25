@@ -111,6 +111,3 @@ if (window.location.href.includes("/home")) {
         attributeFilter: ["class"] // only watch for title attribute changes
     })
 }
-
-
-//<button type="button" class="mini-playbtn-subplace"><span class="icon-common-play"></span></button>

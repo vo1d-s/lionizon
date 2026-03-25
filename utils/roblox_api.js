@@ -12,9 +12,6 @@ async function getFriends(userId) {
         })
         let data = await r.json()
 
-        console.log("REQUEST DATA", data)
-
-
         friend_list.push(...data["PageItems"] || [])
 
         next_cursor = data["NextCursor"]
@@ -26,8 +23,6 @@ async function getFriends(userId) {
 }
 
 async function getPresences(userIds) {
-    console.log(" --- Sending getpresences request ---")
-
     let presences = []
 
     let r = await fetch(`https://presence.roblox.com/v1/presence/users?_extreq`, {

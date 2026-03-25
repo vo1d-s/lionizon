@@ -1,6 +1,6 @@
 const gameDetailsUpdateSecs = 2.5
 
-const IP_API_URL = "https://api-geolocation.juliozapatahernandez2006.workers.dev?ip=";
+const IP_API_URL = "https://api-geolocation.juliozapatahernandez2006.workers.dev";
 
 if (window.location.href.includes("/games/")) { 
     const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
@@ -33,10 +33,10 @@ if (window.location.href.includes("/games/")) {
         });
     }
 
-    async function getIPLocation(ip) {
+    async function getIPLocation(ip, datacenters) {
         if (!ip) return;
         try {
-            const res = await fetch(`${IP_API_URL}${ip}`);
+            const res = await fetch(`${IP_API_URL}?ip=${ip}&dc=${datacenters}`);
             const data = await res.json();
 
             log("Got ip location", data)
@@ -59,16 +59,20 @@ if (window.location.href.includes("/games/")) {
         // get server gamejoin info, batch request
         let joinResults = await joinInstanceInfo(pageGameId, serverIds)
 
+        console.log(joinResults) // DataCenterId
+
         // iterates every joinscript
         // no joinscript -> return (cannot get info)
 
         const ipMap = {}; // ip: serverid
+        const dcIds = [] // datacenters
 
         for (let i = 0; i < serverIds.length; i++) {
             const joinScript = joinResults[i]?.data?.joinScript;
             if (!joinScript) continue;
 
             const ip = joinScript.UdmuxEndpoints[0].Address;
+            const dc = joinScript.DataCenterId
 
             // if ip is already saved get the location
             if (geo_db.addresses[ip]) {
@@ -78,19 +82,20 @@ if (window.location.href.includes("/games/")) {
             
             //if it isnt, add to the list of ips to fetch
             ipMap[ip] = serverIds[i];
+            dcIds.push(dc)
         }
         
         const uncachedIps = Object.keys(ipMap);
         if (uncachedIps.length > 0) {
             // fetch locations, comma separated
-            const locations = await getIPLocation(uncachedIps.join(","));
+            const locations = await getIPLocation(uncachedIps.join(","), dcIds.join(","));
 
             locations.forEach((loc, i) => {
                 const ip = uncachedIps[i];
                 const serverId = ipMap[ip];
 
                 // if there isnt region just pass the country name
-                const location = loc.region? `${loc.region}, ${loc.country_name}` : loc.country_name;
+                const location = loc.city? `${loc.city}, ${loc.country_name}` : loc.country_name;
 
                 // add to db
                 geo_db.servers[serverId] = { ip, location };
