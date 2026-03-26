@@ -224,34 +224,6 @@ async function getServersFromPlaceId(placeId) {
     return server_list
 }
 
-//async function getServersFromPlaceId(placeId) {
-//    const cookie = getCookie()
-//
-//    let server_list = []
-//    let cursor = ""
-//
-//    while (true) {
-//        let r = await fetch("https://rolion.netlify.app/api/getservers", {
-//            method: "POST",
-//            headers: { "Content-Type": "application/json" },
-//            body: JSON.stringify({ roblosecurity: cookie, placeId, cursor })
-//        })
-//
-//        if (r.status === 429) {
-//            console.warn("Rate limited, retrying in 2s...")
-//            await new Promise(resolve => setTimeout(resolve, 2000))
-//            continue
-//        }
-//
-//        const data = await r.json()
-//        server_list.push(...data["data"] || [])
-//        cursor = data["nextPageCursor"]
-//        if (!cursor) break
-//    }
-//
-//    return server_list
-//}
-//
 async function joinInstanceInfo(placeId, serverIds) {
     const cookie = await getCookie()
 
