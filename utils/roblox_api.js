@@ -163,35 +163,95 @@ async function getCookie() {
 }
 
 async function getServersFromPlaceId(placeId) {
-    const { cookie } = await new Promise(resolve =>
-        chrome.runtime.sendMessage({ type: "GET_COOKIE" }, resolve)
-    )
-
     let server_list = []
     let cursor = ""
 
     while (true) {
-        let r = await fetch("https://rolion.netlify.app/api/getservers", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ roblosecurity: cookie, placeId, cursor })
-        })
+        while (true) {
+            try {
+                const r = await fetch(`https://games.roblox.com/v1/games/${placeId}/servers/Public?limit=100&sortOrder=Desc&excludeFullGames=true&cursor=${cursor}&_extreq`, {
+                    method: "GET",
+                    credentials: "include"
+                })
 
-        if (r.status === 429) {
-            console.warn("Rate limited, retrying in 2s...")
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            continue
+                if (r.status === 429) {
+
+                    console.warn(`Rate limited, retrying in 2s...`)
+                    await new Promise(resolve => setTimeout(resolve, 2000))
+                    continue // retry same cursor
+                }
+
+                const data = await r.json()
+                server_list.push(...(data["data"] || []))
+                cursor = data["nextPageCursor"]
+                break
+            } catch {
+                continue
+            }
         }
 
-        const data = await r.json()
-        server_list.push(...data["data"] || [])
-        cursor = data["nextPageCursor"]
+        if (!cursor) break
+    }
+    
+    cursor = ""
+    while (true) {
+        while (true) {
+            try {
+                const r = await fetch(`https://games.roblox.com/v1/games/${placeId}/servers/Public?limit=100&sortOrder=Asc&excludeFullGames=true&cursor=${cursor}&_extreq`, {
+                    method: "GET",
+                    credentials: "include"
+                })
+
+                if (r.status === 429) {
+
+                    console.warn(`Rate limited, retrying in 2s...`)
+                    await new Promise(resolve => setTimeout(resolve, 2000))
+                    continue // retry same cursor
+                }
+
+                const data = await r.json()
+                server_list.push(...(data["data"] || []))
+                cursor = data["nextPageCursor"]
+                break
+            } catch {
+                continue
+            }
+        }
+
         if (!cursor) break
     }
 
     return server_list
 }
 
+//async function getServersFromPlaceId(placeId) {
+//    const cookie = getCookie()
+//
+//    let server_list = []
+//    let cursor = ""
+//
+//    while (true) {
+//        let r = await fetch("https://rolion.netlify.app/api/getservers", {
+//            method: "POST",
+//            headers: { "Content-Type": "application/json" },
+//            body: JSON.stringify({ roblosecurity: cookie, placeId, cursor })
+//        })
+//
+//        if (r.status === 429) {
+//            console.warn("Rate limited, retrying in 2s...")
+//            await new Promise(resolve => setTimeout(resolve, 2000))
+//            continue
+//        }
+//
+//        const data = await r.json()
+//        server_list.push(...data["data"] || [])
+//        cursor = data["nextPageCursor"]
+//        if (!cursor) break
+//    }
+//
+//    return server_list
+//}
+//
 async function joinInstanceInfo(placeId, serverIds) {
     const cookie = await getCookie()
 

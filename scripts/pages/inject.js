@@ -18,7 +18,7 @@ window.fetch = async (...args) => {
                 type: "ROBLOX_SERVERS",
                 data
             }, "*");
-        });
+        }).catch(() => {});
     }
 
     return res;

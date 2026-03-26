@@ -26,8 +26,8 @@
         "lib/popper.min.js",
         "lib/tooltip.min.js",
         "lib/chart.umd.js",
-        "utils/roblox_api.js",
         "utils/misc.js",
+        "utils/roblox_api.js",
         "scripts/pages/home.js",
         "scripts/pages/games.js",
         "scripts/pages/fast_buttons.js"

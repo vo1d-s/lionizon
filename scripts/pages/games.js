@@ -33,14 +33,15 @@ if (window.location.href.includes("/games/")) {
         });
     }
 
-    async function getIPLocation(ip, datacenters) {
-        if (!ip) return;
+    async function getIPLocation(datacenters, placeId) {
         try {
-            const res = await fetch(`${IP_API_URL}?ip=${ip}&dc=${datacenters}`);
+            const res = await fetch(`${IP_API_URL}/geolocate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ datacenters, placeId: placeId })
+            });
             const data = await res.json();
-
-            log("Got ip location", data)
-
+            log("Got ip location", data);
             if (data.results) return data.results;
         } catch (e) {
             console.error("IP lookup failed", e);
@@ -56,8 +57,31 @@ if (window.location.href.includes("/games/")) {
             addresses: {}
         });
 
+        const notSavedServers = []
+
+        const res = await fetch(`${IP_API_URL}/getsaved`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ serverIds })
+        });
+
+        const data = await res.json();
+        for (const id of serverIds) {
+            if (data.results[id]) {
+                const { ip, location } = data.results[id];
+
+                geo_db.servers[id] = { ip, location };
+                geo_db.addresses[ip] = { location };
+
+                console.log("FOUND SERVER IN DB");
+            } else {
+                notSavedServers.push(id);
+            }
+        }
+        //return await res.json(); // { serverId, ip, location }
+
         // get server gamejoin info, batch request
-        let joinResults = await joinInstanceInfo(pageGameId, serverIds)
+        let joinResults = await joinInstanceInfo(pageGameId, notSavedServers)
 
         console.log(joinResults) // DataCenterId
 
@@ -65,42 +89,35 @@ if (window.location.href.includes("/games/")) {
         // no joinscript -> return (cannot get info)
 
         const ipMap = {}; // ip: serverid
-        const dcIds = [] // datacenters
+        const datacenters = {}; // { dcId: { ip: [serverIds] } }
 
-        for (let i = 0; i < serverIds.length; i++) {
+        for (let i = 0; i < notSavedServers.length; i++) {
             const joinScript = joinResults[i]?.data?.joinScript;
             if (!joinScript) continue;
 
             const ip = joinScript.UdmuxEndpoints[0].Address;
-            const dc = joinScript.DataCenterId
+            const dc = String(joinScript.DataCenterId);
 
-            // if ip is already saved get the location
             if (geo_db.addresses[ip]) {
-                geo_db.servers[serverIds[i]] = { ip, ...geo_db.addresses[ip] };
+                geo_db.servers[notSavedServers[i]] = { ip, ...geo_db.addresses[ip] };
                 continue;
             }
-            
-            //if it isnt, add to the list of ips to fetch
-            ipMap[ip] = serverIds[i];
-            dcIds.push(dc)
+
+            if (!datacenters[dc]) datacenters[dc] = {};
+            if (!datacenters[dc][ip]) datacenters[dc][ip] = [];
+            datacenters[dc][ip].push(notSavedServers[i]);
         }
         
-        const uncachedIps = Object.keys(ipMap);
-        if (uncachedIps.length > 0) {
-            // fetch locations, comma separated
-            const locations = await getIPLocation(uncachedIps.join(","), dcIds.join(","));
+        if (Object.keys(datacenters).length > 0) {
+            const locations = await getIPLocation(datacenters, pageGameId);
 
-            locations.forEach((loc, i) => {
-                const ip = uncachedIps[i];
-                const serverId = ipMap[ip];
+            console.log("LOOOOC", locations)
 
-                // if there isnt region just pass the country name
-                const location = loc.city? `${loc.city}, ${loc.country_name}` : loc.country_name;
-
-                // add to db
-                geo_db.servers[serverId] = { ip, location };
-                geo_db.addresses[ip] = { location };
-            });
+            for (const [serverId, loc] of Object.entries(locations)) {
+                const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
+                geo_db.servers[serverId] = { ip: loc.ip, location };
+                geo_db.addresses[loc.ip] = { location };
+            }
         }
 
         saveData({ geo_db });
@@ -146,6 +163,9 @@ if (window.location.href.includes("/games/")) {
     window.addEventListener("message", async (event) => {
         if (event.data.type === "ROBLOX_SERVERS") {
             let servers = event.data.data.data
+
+            //const sssssssssssss = await getServersFromPlaceId(pageGameId)
+            //console.log(sssssssssssss)
 
             const existingIds = new Set(server_list.map(s => s.id));
             const newServers = servers.filter(s => !existingIds.has(s.id)); // just new servers that appeared
