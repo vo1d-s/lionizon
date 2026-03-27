@@ -134,6 +134,8 @@ if (window.location.href.includes("/games/")) {
             addresses: {}
         });
 
+        console.log("GEOOOOOO", geo_db)
+
         const cached = {};
         const missing = [];
 
@@ -146,6 +148,8 @@ if (window.location.href.includes("/games/")) {
             }
         }
 
+        console.log("MISSINNNGG", missing)
+
         const fetched = missing.length > 0 ? await getServerJoinLocation(missing) : {};
 
         return { ...cached, ...fetched };
@@ -153,7 +157,7 @@ if (window.location.href.includes("/games/")) {
 
     // Intercept servers request
     const script = document.createElement("script");
-    script.src = chrome.runtime.getURL("scripts/pages/inject.js");
+    script.src = chrome.runtime.getURL("scripts/pages/games/inject.js");
     document.documentElement.appendChild(script);
 
     // already captured servers

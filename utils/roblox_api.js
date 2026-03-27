@@ -236,3 +236,11 @@ async function joinInstanceInfo(placeId, serverIds) {
     let d = await r.json()
     return d["data"] // array of { serverId, data }
 }
+
+async function getRobux() {
+    let userId = await getLoggedInUserId()
+    const r = await fetch(`https://economy.roblox.com/v1/users/${userId}/currency`, { credentials: "include" })
+    const data = await r.json()
+
+    return data.robux
+}

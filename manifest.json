@@ -17,8 +17,9 @@
       "run_at": "document_start",
       "css": [
         "css/cal-heatmap.css",
-        "css/main-ui.css",
-        "css/pages/games.css"
+        "css/general.css",
+        "css/pages/games.css",
+        "css/pages/settings.css"
       ],
       "js": [
         "lib/d3.v7.min.js",
@@ -28,15 +29,17 @@
         "lib/chart.umd.js",
         "utils/misc.js",
         "utils/roblox_api.js",
-        "scripts/pages/home.js",
-        "scripts/pages/games.js",
-        "scripts/pages/fast_buttons.js"
+        "scripts/pages/home/home.js",
+        "scripts/pages/home/fast_buttons.js",
+        "scripts/pages/games/games.js",
+        "scripts/pages/general/settings.js",
+        "scripts/pages/general/robux_to_currency.js"
       ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["scripts/pages/inject.js"],
+      "resources": ["scripts/pages/games/inject.js"],
       "matches": ["*://*.roblox.com/*"]
     }
   ],

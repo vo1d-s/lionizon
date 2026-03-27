@@ -1,14 +1,27 @@
 const extensionName = chrome.runtime.getManifest().name
 
-async function loadData(name, defaultValue = {}) {
+async function loadData(name, defaultValue = {}, return_if_existing = false) {
     const result = await chrome.storage.local.get(name);
-    const data = result[name] ?? defaultValue;
+    let data = result[name];
+
+    let success = true
+    if (!data) {
+        success = false
+    }
+
+    data = data ?? defaultValue
 
     log("Data loaded for", name, data);
-    return data;
+
+    if (return_if_existing) {
+        return { data, success }
+    }
+
+    return data
 }
 
 async function saveData(data) {
+  console.log(data)
   await chrome.storage.local.set(data);
   log("Data saved.")
 }
