@@ -32,7 +32,6 @@
         "scripts/pages/games/games.js",
         "scripts/pages/home/home.js",
         "scripts/pages/home/fast_buttons.js",
-        "scripts/pages/home/friend_games.js",
         "scripts/pages/general/settings.js",
         "scripts/pages/general/robux_to_currency.js"
       ]

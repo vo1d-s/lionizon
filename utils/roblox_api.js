@@ -182,6 +182,7 @@ async function getServersFromPlaceId(placeId) {
                 }
 
                 const data = await r.json()
+                console.log(data)
                 server_list.push(...(data["data"] || []))
                 cursor = data["nextPageCursor"]
                 break
@@ -210,6 +211,7 @@ async function getServersFromPlaceId(placeId) {
                 }
 
                 const data = await r.json()
+                console.log(data)
                 server_list.push(...(data["data"] || []))
                 cursor = data["nextPageCursor"]
                 break
@@ -226,15 +228,22 @@ async function getServersFromPlaceId(placeId) {
 
 async function joinInstanceInfo(placeId, serverIds) {
     const cookie = await getCookie()
+    const CHUNK_SIZE = 100 // tune this down if still failing
 
-    let r = await fetch("https://rolion.netlify.app/api/joingameinstance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roblosecurity: cookie, placeId, serverIds })
-    })
+    const chunks = []
+    for (let i = 0; i < serverIds.length; i += CHUNK_SIZE) {
+        chunks.push(serverIds.slice(i, i + CHUNK_SIZE))
+    }
 
-    let d = await r.json()
-    return d["data"] // array of { serverId, data }
+    const results = await Promise.all(chunks.map(chunk =>
+        fetch("https://rolion.netlify.app/api/joingameinstance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roblosecurity: cookie, placeId, serverIds: chunk })
+        }).then(r => r.json()).then(r => r.data)
+    ))
+
+    return results.flat()
 }
 
 async function getRobux() {

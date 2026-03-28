@@ -1,5 +1,7 @@
 const gameDetailsUpdateSecs = 2.5
 
+const IP_API_URL = "https://api-geolocation.juliozapatahernandez2006.workers.dev";
+
 const locationCache = {};
 const locationResolvers = {};
 
@@ -105,8 +107,22 @@ async function getServerJoinLocation(serverIds, gameId) {
 
         for (const [serverId, loc] of Object.entries(locations)) {
             const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
-            geo_db.servers[serverId] = { ip: loc.ip, location };
-            geo_db.addresses[loc.ip] = { location };
+
+            const info = {
+                country: loc.country,
+                country_name: loc.country_name,
+                city: loc.city,
+                region: loc.region,
+                region_code: loc.region_code,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                timezone: loc.timezone,
+                postal_code: loc.postal_code,
+                continent: loc.continent,
+            }
+
+            geo_db.servers[serverId] = { ip: loc.ip, location, ...info };
+            geo_db.addresses[loc.ip] = { location, ...info};
         }
     }
 
@@ -141,15 +157,23 @@ async function handleServerLocation(serverIds, gameId) {
     console.log("MISSINNNGG", missing)
 
     const fetched = missing.length > 0 ? await getServerJoinLocation(missing, gameId) : {};
+    console.log(fetched)
 
     return { ...cached, ...fetched };
 }   
 
-const IP_API_URL = "https://api-geolocation.juliozapatahernandez2006.workers.dev";
-
 if (window.location.href.includes("/games/")) { 
     const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
     log(`User loaded game ${pageGameId}`)
+
+    //;(async () => {
+    //    let all_servers = await getServersFromPlaceId(pageGameId)
+    //    let all_servers_loc = await handleServerLocation(all_servers.map(s => s.id), pageGameId)
+//
+    //    console.log(all_servers, all_servers_loc)
+    //})();
+    
+
 
     /* --------------------------- Server geolocation --------------------------- */
 
