@@ -1,5 +1,150 @@
 const gameDetailsUpdateSecs = 2.5
 
+const locationCache = {};
+const locationResolvers = {};
+
+// fires when server data found
+function resolveLocation(serverId, value) {
+    locationCache[serverId] = value;
+    if (locationResolvers[serverId]) {
+        locationResolvers[serverId].forEach(resolve => resolve(value));
+        delete locationResolvers[serverId];
+    }
+}
+
+// returns a promise that resolves when the location for this server is known
+// if found, returns, if waits 10s and it isnt there, keep default full text
+function waitForLocation(serverId, timeout = 10000) {
+    if (locationCache[serverId]) return Promise.resolve(locationCache[serverId]);
+
+    return new Promise((resolve, reject) => {
+        if (!locationResolvers[serverId]) locationResolvers[serverId] = [];
+        locationResolvers[serverId].push(resolve);
+
+        setTimeout(() => reject(`Timeout waiting for location ${serverId}`), timeout);
+    });
+}
+
+async function getIPLocation(datacenters, placeId) {
+    try {
+        const res = await fetch(`${IP_API_URL}/geolocate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ datacenters, placeId: placeId })
+        });
+        const data = await res.json();
+        log("Got ip location", data);
+        if (data.results) return data.results;
+    } catch (e) {
+        console.error("IP lookup failed", e);
+    }
+}
+
+// this is for servers that arent already saved
+async function getServerJoinLocation(serverIds, gameId) {
+    log("Saved server not found, getting joininfo")
+
+    let geo_db = await loadData("geo_db", {
+        servers: {},
+        addresses: {}
+    });
+
+    const notSavedServers = []
+
+    const res = await fetch(`${IP_API_URL}/getsaved`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverIds })
+    });
+
+    const data = await res.json();
+    for (const id of serverIds) {
+        if (data.results[id]) {
+            const { ip, location } = data.results[id];
+
+            geo_db.servers[id] = { ip, location };
+            geo_db.addresses[ip] = { location };
+
+            console.log("FOUND SERVER IN DB");
+        } else {
+            notSavedServers.push(id);
+        }
+    }
+    //return await res.json(); // { serverId, ip, location }
+
+    // get server gamejoin info, batch request
+    let joinResults = await joinInstanceInfo(gameId, notSavedServers)
+
+    console.log(joinResults) // DataCenterId
+
+    // iterates every joinscript
+    // no joinscript -> return (cannot get info)
+
+    const ipMap = {}; // ip: serverid
+    const datacenters = {}; // { dcId: { ip: [serverIds] } }
+
+    for (let i = 0; i < notSavedServers.length; i++) {
+        const joinScript = joinResults[i]?.data?.joinScript;
+        if (!joinScript) continue;
+
+        const ip = joinScript.UdmuxEndpoints[0].Address;
+        const dc = String(joinScript.DataCenterId);
+
+        if (geo_db.addresses[ip]) {
+            geo_db.servers[notSavedServers[i]] = { ip, ...geo_db.addresses[ip] };
+            continue;
+        }
+
+        if (!datacenters[dc]) datacenters[dc] = {};
+        if (!datacenters[dc][ip]) datacenters[dc][ip] = [];
+        datacenters[dc][ip].push(notSavedServers[i]);
+    }
+    
+    if (Object.keys(datacenters).length > 0) {
+        const locations = await getIPLocation(datacenters, gameId);
+
+        for (const [serverId, loc] of Object.entries(locations)) {
+            const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
+            geo_db.servers[serverId] = { ip: loc.ip, location };
+            geo_db.addresses[loc.ip] = { location };
+        }
+    }
+
+    saveData({ geo_db });
+
+    return Object.fromEntries(serverIds.map(id => [id, geo_db.servers[id]]).filter(([, v]) => v))
+}
+
+// fetch saved db for server details
+async function handleServerLocation(serverIds, gameId) {
+    if (!serverIds) return;
+
+    const geo_db = await loadData("geo_db", {
+        servers: {},
+        addresses: {}
+    });
+
+    console.log("GEOOOOOO", geo_db)
+
+    const cached = {};
+    const missing = [];
+
+    // fetches the ones that are missing
+    for (const id of serverIds) {
+        if (geo_db.servers[id]) {
+            cached[id] = geo_db.servers[id];
+        } else {
+            missing.push(id);
+        }
+    }
+
+    console.log("MISSINNNGG", missing)
+
+    const fetched = missing.length > 0 ? await getServerJoinLocation(missing, gameId) : {};
+
+    return { ...cached, ...fetched };
+}   
+
 const IP_API_URL = "https://api-geolocation.juliozapatahernandez2006.workers.dev";
 
 if (window.location.href.includes("/games/")) { 
@@ -7,153 +152,6 @@ if (window.location.href.includes("/games/")) {
     log(`User loaded game ${pageGameId}`)
 
     /* --------------------------- Server geolocation --------------------------- */
-
-    const locationCache = {};
-    const locationResolvers = {};
-
-    // fires when server data found
-    function resolveLocation(serverId, value) {
-        locationCache[serverId] = value;
-        if (locationResolvers[serverId]) {
-            locationResolvers[serverId].forEach(resolve => resolve(value));
-            delete locationResolvers[serverId];
-        }
-    }
-
-    // returns a promise that resolves when the location for this server is known
-    // if found, returns, if waits 10s and it isnt there, keep default full text
-    function waitForLocation(serverId, timeout = 10000) {
-        if (locationCache[serverId]) return Promise.resolve(locationCache[serverId]);
-
-        return new Promise((resolve, reject) => {
-            if (!locationResolvers[serverId]) locationResolvers[serverId] = [];
-            locationResolvers[serverId].push(resolve);
-
-            setTimeout(() => reject(`Timeout waiting for location ${serverId}`), timeout);
-        });
-    }
-
-    async function getIPLocation(datacenters, placeId) {
-        try {
-            const res = await fetch(`${IP_API_URL}/geolocate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ datacenters, placeId: placeId })
-            });
-            const data = await res.json();
-            log("Got ip location", data);
-            if (data.results) return data.results;
-        } catch (e) {
-            console.error("IP lookup failed", e);
-        }
-    }
-
-    // this is for servers that arent already saved
-    async function getServerJoinLocation(serverIds) {
-        log("Saved server not found, getting joininfo")
-
-        let geo_db = await loadData("geo_db", {
-            servers: {},
-            addresses: {}
-        });
-
-        const notSavedServers = []
-
-        const res = await fetch(`${IP_API_URL}/getsaved`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ serverIds })
-        });
-
-        const data = await res.json();
-        for (const id of serverIds) {
-            if (data.results[id]) {
-                const { ip, location } = data.results[id];
-
-                geo_db.servers[id] = { ip, location };
-                geo_db.addresses[ip] = { location };
-
-                console.log("FOUND SERVER IN DB");
-            } else {
-                notSavedServers.push(id);
-            }
-        }
-        //return await res.json(); // { serverId, ip, location }
-
-        // get server gamejoin info, batch request
-        let joinResults = await joinInstanceInfo(pageGameId, notSavedServers)
-
-        console.log(joinResults) // DataCenterId
-
-        // iterates every joinscript
-        // no joinscript -> return (cannot get info)
-
-        const ipMap = {}; // ip: serverid
-        const datacenters = {}; // { dcId: { ip: [serverIds] } }
-
-        for (let i = 0; i < notSavedServers.length; i++) {
-            const joinScript = joinResults[i]?.data?.joinScript;
-            if (!joinScript) continue;
-
-            const ip = joinScript.UdmuxEndpoints[0].Address;
-            const dc = String(joinScript.DataCenterId);
-
-            if (geo_db.addresses[ip]) {
-                geo_db.servers[notSavedServers[i]] = { ip, ...geo_db.addresses[ip] };
-                continue;
-            }
-
-            if (!datacenters[dc]) datacenters[dc] = {};
-            if (!datacenters[dc][ip]) datacenters[dc][ip] = [];
-            datacenters[dc][ip].push(notSavedServers[i]);
-        }
-        
-        if (Object.keys(datacenters).length > 0) {
-            const locations = await getIPLocation(datacenters, pageGameId);
-
-            console.log("LOOOOC", locations)
-
-            for (const [serverId, loc] of Object.entries(locations)) {
-                const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
-                geo_db.servers[serverId] = { ip: loc.ip, location };
-                geo_db.addresses[loc.ip] = { location };
-            }
-        }
-
-        saveData({ geo_db });
-
-        return geo_db.servers;
-    }
-
-    // fetch saved db for server details
-    async function handleServerLocation(serverIds) {
-        if (!serverIds) return;
-
-        const geo_db = await loadData("geo_db", {
-            servers: {},
-            addresses: {}
-        });
-
-        console.log("GEOOOOOO", geo_db)
-
-        const cached = {};
-        const missing = [];
-
-        // fetches the ones that are missing
-        for (const id of serverIds) {
-            if (geo_db.servers[id]) {
-                cached[id] = geo_db.servers[id];
-            } else {
-                missing.push(id);
-            }
-        }
-
-        console.log("MISSINNNGG", missing)
-
-        const fetched = missing.length > 0 ? await getServerJoinLocation(missing) : {};
-
-        return { ...cached, ...fetched };
-    }   
 
     // Intercept servers request
     const script = document.createElement("script");
@@ -181,7 +179,7 @@ if (window.location.href.includes("/games/")) {
             log(newServers)
 
             // fetch every location if it isnt saved
-            const locations = await handleServerLocation(newServers.map(s => s.id));
+            const locations = await handleServerLocation(newServers.map(s => s.id), pageGameId);
 
             // sends location for the element to wait
             for (const [serverId, data] of Object.entries(locations)) {

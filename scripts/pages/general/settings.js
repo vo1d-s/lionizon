@@ -55,7 +55,6 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
         
         console.log("EXTRACTED CURRENT THEME", theme)
 
-        // remove existing
         document.querySelector(".lionizon-dropdown")?.remove()
 
         const dropdown = document.createElement("div")
@@ -112,7 +111,7 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
             }
         }
 
-        // close on outside click
+        // close on click
         setTimeout(() => {
             document.addEventListener("click", (e) => {
                 if (!dropdown.contains(e.target)) dropdown.remove()

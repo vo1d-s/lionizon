@@ -1,25 +1,3 @@
-/*.settings-select {
-/*    /*overflow: hidden;
-/*    /*display: flex;
-/*    /*border-radius: var(--radius-medium);
-/*    /*border-style: solid;
-/*    /*border-width: var(--stroke-standard);
-/*    /*box-sizing: border-box;
-/*    /*padding-left: var(--padding-medium);
-/*    /*padding-right: var(--padding-medium);
-/*    /*width: 100%;
-/*    /*height: var(--size-1000);
-/*    /*font: var(--typography-body-medium-font);
-/*    /*letter-spacing: var(--typography-body-medium-letter-spacing);
-/*    /*color: var(--color-content-default);
-/*    /*background-color: var(--color-none);
-/*    /*justify-content: space-between;
-/*    /*align-items: center;
-/*    /*cursor: pointer;
-/*    /*position: relative;*/
-/*
-/*}*/
-
 .settings-select:focus {
   outline: none !important;
   box-shadow: none !important;

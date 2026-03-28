@@ -70,6 +70,7 @@ if (window.location.href.includes("/home")) {
     //friends-carousel-list-container
 
     const previousStates = new Map() // userId -> currentGame
+    const observedTiles = new Set()
 
     const status_observer = new MutationObserver(() => {
         const element = document.querySelector(".friends-carousel-list-container")
@@ -77,7 +78,7 @@ if (window.location.href.includes("/home")) {
 
         const friend_cards = element.querySelectorAll(".avatar.avatar-card-fullbody")
         
-        friend_cards.forEach(card => {
+        friend_cards.forEach(async card => {
             const profileLink = card.querySelector(".avatar-card-link").href
             const userId = profileLink.split("/users/")[1].split("/")[0]
             const presenceIcon = card.querySelector("[data-testid='presence-icon']")
@@ -90,18 +91,53 @@ if (window.location.href.includes("/home")) {
             if (previousGame !== currentGame) {
                 log(`${userId} changed: ${previousGame} → ${currentGame}`, user_status)
                 previousStates.set(userId, currentGame)
-            }
 
-            const image_card = card.querySelector(".avatar-card-image")
+                const image_card = card.querySelector(".avatar-card-image")
 
-            if (user_status == "game") {
-                image_card.style.border = "solid 3px #02b757"
-            } else if (user_status == "online") {
-                image_card.style.border = "solid 3px #00a2ff"
-            } else if (user_status == "studio") {
-                image_card.style.border = "solid 3px #f68802"
+                if (user_status == "game") {
+                    image_card.style.border = "solid 3px #02b757"
+                } else if (user_status == "online") {
+                    image_card.style.border = "solid 3px #00a2ff"
+                } else if (user_status == "studio") {
+                    image_card.style.border = "solid 3px #f68802"
+                }
+
+                let presence = null
+                let attempts = 0
+                while (!presence && attempts++ < 5) {
+                    presence = (await getPresences([userId]))?.[0]
+                }
+                if (!presence) return
+
+                let serverId = presence.gameId
+                let placeId = presence.placeId
+                let universeId = presence.universeId
+
+                const tile = card.closest(".friends-carousel-tile")
+                if (!observedTiles.has(tile)) {
+                    observedTiles.add(tile)
+                    observeAdded("div", async (el) => {
+                        if (el.style.position === "absolute") {
+                            console.log("hover popup for", userId, el)
+                            console.log(serverId, placeId)
+
+                            const results = await handleServerLocation([serverId], placeId)
+                            let location = results[serverId]?.location
+                            let popup_info = el.querySelector(".friend-presence-info")
+
+                            if (location) {
+                                popup_info.children[0].insertAdjacentHTML("afterend",`
+                                    <p style="font-size: 14px">${location}</p>
+                                `)
+                            } else {
+                                popup_info.children[0].insertAdjacentHTML("afterend",`
+                                    <p style="font-size: 14px">Full or reserved server</p>
+                                `)
+                            }
+                        }
+                    }, tile)
+                }
             }
-            
         })
     })
 
