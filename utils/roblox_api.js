@@ -227,23 +227,19 @@ async function getServersFromPlaceId(placeId) {
 }
 
 async function joinInstanceInfo(placeId, serverIds) {
-    const cookie = await getCookie()
-    const CHUNK_SIZE = 100 // tune this down if still failing
-
-    const chunks = []
-    for (let i = 0; i < serverIds.length; i += CHUNK_SIZE) {
-        chunks.push(serverIds.slice(i, i + CHUNK_SIZE))
-    }
-
-    const results = await Promise.all(chunks.map(chunk =>
-        fetch("https://rolion.netlify.app/api/joingameinstance", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ roblosecurity: cookie, placeId, serverIds: chunk })
-        }).then(r => r.json()).then(r => r.data)
-    ))
-
-    return results.flat()
+    const r = await fetch(`https://api-servers.juliozapatahernandez2006.workers.dev/joingame-instance?_extreq`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            "placeId": placeId,
+            "serverIds": serverIds
+        })
+    })
+    const data = await r.json()
+    console.log(data)
+    return data.data
 }
 
 async function getRobux() {

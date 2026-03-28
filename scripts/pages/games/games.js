@@ -44,91 +44,56 @@ async function getIPLocation(datacenters, placeId) {
 
 // this is for servers that arent already saved
 async function getServerJoinLocation(serverIds, gameId) {
-    log("Saved server not found, getting joininfo")
+    log("Getting join info for servers");
 
-    let geo_db = await loadData("geo_db", {
-        servers: {},
-        addresses: {}
-    });
+    let geo_db = await loadData("geo_db", { servers: {}, addresses: {} });
 
-    const notSavedServers = []
+    // joinInfo for ALL missing servers (worker handles Firebase cache internally)
+    let joinResults = await joinInstanceInfo(gameId, serverIds);
+    console.log(joinResults);
 
-    const res = await fetch(`${IP_API_URL}/getsaved`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverIds })
-    });
+    const datacenters = {};
 
-    const data = await res.json();
-    for (const id of serverIds) {
-        if (data.results[id]) {
-            const { ip, location } = data.results[id];
-
-            geo_db.servers[id] = { ip, location };
-            geo_db.addresses[ip] = { location };
-
-            console.log("FOUND SERVER IN DB");
-        } else {
-            notSavedServers.push(id);
-        }
-    }
-    //return await res.json(); // { serverId, ip, location }
-
-    // get server gamejoin info, batch request
-    let joinResults = await joinInstanceInfo(gameId, notSavedServers)
-
-    console.log(joinResults) // DataCenterId
-
-    // iterates every joinscript
-    // no joinscript -> return (cannot get info)
-
-    const ipMap = {}; // ip: serverid
-    const datacenters = {}; // { dcId: { ip: [serverIds] } }
-
-    for (let i = 0; i < notSavedServers.length; i++) {
+    for (let i = 0; i < serverIds.length; i++) {
         const joinScript = joinResults[i]?.data?.joinScript;
         if (!joinScript) continue;
 
-        const ip = joinScript.UdmuxEndpoints[0].Address;
+        console.log(joinScript)
+
+        const ip = joinScript.UdmuxEndpoints[0]?.Address;
         const dc = String(joinScript.DataCenterId);
 
+        if (!ip || !dc) continue
+
+        // still use local address cache to avoid even sending to the worker
         if (geo_db.addresses[ip]) {
-            geo_db.servers[notSavedServers[i]] = { ip, ...geo_db.addresses[ip] };
+            geo_db.servers[serverIds[i]] = { ip, ...geo_db.addresses[ip] };
             continue;
         }
 
         if (!datacenters[dc]) datacenters[dc] = {};
         if (!datacenters[dc][ip]) datacenters[dc][ip] = [];
-        datacenters[dc][ip].push(notSavedServers[i]);
+        datacenters[dc][ip].push(serverIds[i]);
     }
-    
+
     if (Object.keys(datacenters).length > 0) {
         const locations = await getIPLocation(datacenters, gameId);
 
         for (const [serverId, loc] of Object.entries(locations)) {
             const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
-
             const info = {
-                country: loc.country,
-                country_name: loc.country_name,
-                city: loc.city,
-                region: loc.region,
-                region_code: loc.region_code,
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-                timezone: loc.timezone,
-                postal_code: loc.postal_code,
-                continent: loc.continent,
-            }
-
+                country: loc.country, country_name: loc.country_name, city: loc.city,
+                region: loc.region, region_code: loc.region_code,
+                latitude: loc.latitude, longitude: loc.longitude,
+                timezone: loc.timezone, postal_code: loc.postal_code, continent: loc.continent,
+            };
             geo_db.servers[serverId] = { ip: loc.ip, location, ...info };
-            geo_db.addresses[loc.ip] = { location, ...info};
+            geo_db.addresses[loc.ip] = { location, ...info };
         }
     }
 
     saveData({ geo_db });
-
-    return Object.fromEntries(serverIds.map(id => [id, geo_db.servers[id]]).filter(([, v]) => v))
+    return Object.fromEntries(serverIds.map(id => [id, geo_db.servers[id]]).filter(([, v]) => v));
 }
 
 // fetch saved db for server details
@@ -500,14 +465,25 @@ if (window.location.href.includes("/games/")) {
             infoWrapper = document.createElement("div")
             infoWrapper.classList.add("info-wrapper")
             infoWrapper.innerHTML = `
-            <p class="server-ping">Ping: ${serverPing}ms</p>
-            <p class="server-fps">FPS: ${serverFps}</p>
-            <p class="server-location">Full server</p>
+            <div class="flex items-center" style="gap:5px; margin-bottom:5px !important">
+                <div class="horizonal-pill flex items-center" style="gap:5px">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe-icon lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    <p class="server-ping">${serverPing}ms</p>
+                </div>
+                <div class="horizonal-pill flex items-center" style="gap:5px">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gauge-icon lucide-gauge"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+                    <p class="server-fps">${Math.round(serverFps)} fps</p>
+                </div>
+            </div>
+            <div class="flex items-center" style="gap:5px">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-icon lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                <p class="server-location">Full server</p>
+            </div>
             `
             serverDetails.querySelector("span").prepend(infoWrapper)
         }
 
-        const serverLocEl = infoWrapper.querySelector(".server-location")
+        const serverLocEl = infoWrapper.querySelector("div .server-location")
 
         try {
             const serverLocation = await waitForLocation(serverId);

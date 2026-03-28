@@ -124,6 +124,23 @@
 
 .info-wrapper * {
     font-size: 14px !important;
+    color: var(--color-content-emphasis) !important;
+}
+
+.horizonal-pill {
+    display: flex !important;
+    gap: 5px;
+    background-color: var(--color-over-media-100);
+    border-radius: 15px;
+    padding: 0px 9px 0px 9px !important;
+}
+
+.info-wrapper .horizonal-pill p {
+    font-size: 11px !important;
+}
+
+.info-wrapper .horizonal-pill svg {
+    width: 14px !important;
 }
 
 .game-server-details .server-id-text {
