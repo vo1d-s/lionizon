@@ -127,6 +127,27 @@ async function handleServerLocation(serverIds, gameId) {
     return { ...cached, ...fetched };
 }   
 
+// separate player and rating in game cards
+observeAdded(".game-card-info", (el) => {
+    if (el.dataset.grouped) return; // guard
+    el.dataset.grouped = "true";
+
+    const children = [...el.children];
+    if (children.length < 4) return; // safety check
+
+    const group1 = document.createElement("div");
+    group1.append(children[0], children[1]);
+
+    const group2 = document.createElement("div");
+    group2.append(children[2], children[3]);
+
+    el.setAttribute("style", "display: flex !important; justify-content: space-between; padding-top: 4px !important;")
+    group1.setAttribute("style", "display: inline-flex !important; align-items: center !important;")
+    group2.setAttribute("style", "display: inline-flex !important; align-items: center !important;")
+
+    el.append(group1, group2);
+})
+
 if (window.location.href.includes("/games/")) { 
     const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
     log(`User loaded game ${pageGameId}`)
@@ -466,11 +487,11 @@ if (window.location.href.includes("/games/")) {
             infoWrapper.classList.add("info-wrapper")
             infoWrapper.innerHTML = `
             <div class="flex items-center" style="gap:5px; margin-bottom:10px !important">
-                <div class="horizonal-pill flex items-center" style="gap:5px">
+                <div class="horizontal-pill flex items-center" style="gap:5px">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe-icon lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                     <p class="server-ping">${serverPing}ms</p>
                 </div>
-                <div class="horizonal-pill flex items-center" style="gap:5px">
+                <div class="horizontal-pill flex items-center" style="gap:5px">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gauge-icon lucide-gauge"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
                     <p class="server-fps">${Math.round(serverFps)} fps</p>
                 </div>

@@ -127,7 +127,7 @@
     color: var(--color-content-emphasis) !important;
 }
 
-.horizonal-pill {
+.horizontal-pill {
     display: flex !important;
     gap: 5px;
     background-color: var(--color-over-media-100);
