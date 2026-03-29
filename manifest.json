@@ -39,7 +39,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["scripts/pages/games/inject.js", "assets/*"],
+      "resources": ["scripts/pages/games/inject.js"],
       "matches": ["*://*.roblox.com/*"]
     }
   ],

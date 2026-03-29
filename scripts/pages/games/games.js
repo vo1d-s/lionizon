@@ -465,7 +465,7 @@ if (window.location.href.includes("/games/")) {
             infoWrapper = document.createElement("div")
             infoWrapper.classList.add("info-wrapper")
             infoWrapper.innerHTML = `
-            <div class="flex items-center" style="gap:5px; margin-bottom:5px !important">
+            <div class="flex items-center" style="gap:5px; margin-bottom:10px !important">
                 <div class="horizonal-pill flex items-center" style="gap:5px">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe-icon lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                     <p class="server-ping">${serverPing}ms</p>
@@ -475,19 +475,28 @@ if (window.location.href.includes("/games/")) {
                     <p class="server-fps">${Math.round(serverFps)} fps</p>
                 </div>
             </div>
-            <div class="flex items-center" style="gap:5px">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-icon lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-                <p class="server-location">Full server</p>
+            <div class="flex items-center" style="gap:8px;">
+                <span class="location-flag-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ban-icon lucide-ban"><circle cx="12" cy="12" r="10"/><path d="M4.929 4.929 19.07 19.071"/></svg>
+                </span>
+                <p class="server-location" style="width: 100%;">Full server</p>
             </div>
+
+            <div class="rbx-divider" style="margin-top:10px;"></div>
             `
             serverDetails.querySelector("span").prepend(infoWrapper)
         }
+
+        // location pin svg
+        // <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-icon lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
 
         const serverLocEl = infoWrapper.querySelector("div .server-location")
 
         try {
             const serverLocation = await waitForLocation(serverId);
             serverLocEl.textContent = serverLocation.location ?? "Full server";
+            let flagContainer = infoWrapper.querySelector("div .location-flag-container")
+            flagContainer.innerHTML = `<img src="https://hatscripts.github.io/circle-flags/flags/${serverLocation.country.toLowerCase()}.svg">`
         } catch (e) {
             serverLocEl.textContent = "Full server";
         }

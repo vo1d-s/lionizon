@@ -123,7 +123,7 @@
 }
 
 .info-wrapper * {
-    font-size: 14px !important;
+    font-size: 13.5px !important;
     color: var(--color-content-emphasis) !important;
 }
 
@@ -143,7 +143,22 @@
     width: 14px !important;
 }
 
+.info-wrapper div .location-flag-container img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .game-server-details .server-id-text {
     text-align: center !important;
     font-size: 9px !important;
+}
+
+.game-server-details span .game-server-join-btn {
+    background: #335fff !important;
+}
+
+.game-server-details span .game-server-join-btn:hover {
+    background: #243a8b !important;
 }
