@@ -1,7 +1,7 @@
 function setupGameButtons() {
     const selector = [
-        ".list-item.game-card.game-tile .game-card-container",
-        ".list-item.hover-game-tile",
+        ".list-item.game-card.game-tile .game-card-container:not(.experience-events-tile)",
+        ".list-item.hover-game-tile:not(.experience-events-tile)",
     ].join(", ")
 
     function bindCard(el) {

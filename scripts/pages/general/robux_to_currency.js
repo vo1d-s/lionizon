@@ -8,12 +8,15 @@ async function getConversionRate(currency, amount) {
 }
 
 (async () => {
-    const { data: saved_settings, success } = await loadData("lionizon_settings", { currency: "USD" }, true)
+    const { data: saved_settings, success } = await loadData("lionizon_settings", {}, true)
 
     if (!success) {
-        await saveData({ lionizon_settings: { currency: "USD" }})
+        await saveData({ lionizon_settings: { ...saved_settings, currency: "USD", convert_rbx_to_currency: "Enabled" }})
     }
+    let convert_enabled = saved_settings.convert_rbx_to_currency === "Enabled"
     let chosen_currency = saved_settings.currency
+
+    if (!convert_enabled) return
 
     const current_rbx = await getRobux()
     const current_rbx_to_eur = 0.011995 * current_rbx

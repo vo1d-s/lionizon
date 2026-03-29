@@ -128,25 +128,25 @@ async function handleServerLocation(serverIds, gameId) {
 }   
 
 // separate player and rating in game cards
-observeAdded(".game-card-info", (el) => {
-    if (el.dataset.grouped) return; // guard
-    el.dataset.grouped = "true";
-
-    const children = [...el.children];
-    if (children.length < 4) return; // safety check
-
-    const group1 = document.createElement("div");
-    group1.append(children[0], children[1]);
-
-    const group2 = document.createElement("div");
-    group2.append(children[2], children[3]);
-
-    el.setAttribute("style", "display: flex !important; justify-content: space-between; padding-top: 4px !important;")
-    group1.setAttribute("style", "display: inline-flex !important; align-items: center !important;")
-    group2.setAttribute("style", "display: inline-flex !important; align-items: center !important;")
-
-    el.append(group1, group2);
-})
+//observeAdded(".game-card-info", (el) => {
+//    if (el.dataset.grouped) return; // guard
+//    el.dataset.grouped = "true";
+//
+//    const children = [...el.children];
+//    if (children.length < 4) return; // safety check
+//
+//    const group1 = document.createElement("div");
+//    group1.append(children[0], children[1]);
+//
+//    const group2 = document.createElement("div");
+//    group2.append(children[2], children[3]);
+//
+//    el.setAttribute("style", "display: flex !important; justify-content: space-between; padding-top: 4px !important;")
+//    group1.setAttribute("style", "display: inline-flex !important; align-items: center !important;")
+//    group2.setAttribute("style", "display: inline-flex !important; align-items: center !important;")
+//
+//    el.append(group1, group2);
+//})
 
 if (window.location.href.includes("/games/")) { 
     const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
@@ -474,7 +474,7 @@ if (window.location.href.includes("/games/")) {
 
         let serverInfo = await waitForServerId(shortServerId)
         const serverId = serverInfo["id"]
-        const serverPing = serverInfo["ping"]
+        const serverPing = serverInfo["ping"] || 80
         const serverFps = serverInfo["fps"]
 
         serverIdText.textContent = `ID: ${serverId}`

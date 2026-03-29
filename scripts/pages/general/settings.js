@@ -198,6 +198,7 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
             </div>
             `
 
+            convert_to_currency_select = await dropdownBuilder("Convert robux to currency?", "Enabled", settings, "convert_rbx_to_currency", ["Enabled", "Disabled"])
             currency_select = await dropdownBuilder("Currency", "USD", settings, "currency", currencies)
         }
 
