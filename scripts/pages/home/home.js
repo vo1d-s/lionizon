@@ -48,8 +48,10 @@ if (window.location.href.includes("/home")) {
                 thumbnail_span.style.border = "solid 3px #f68802"
             }
 
+            const userThumbnail = await getUsersThumbnail([userId])
+
             const thumbnail = document.createElement("img")
-            thumbnail.src = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-6EF0E29E243BDBACDC85B8E13DDC7378-Png/420/420/AvatarHeadshot/Png/noFilter"
+            thumbnail.src = userThumbnail[0].imageUrl
             thumbnail_span.appendChild(thumbnail)
 
             const text = document.createElement("h1")

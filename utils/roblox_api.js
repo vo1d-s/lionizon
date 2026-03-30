@@ -118,8 +118,8 @@ async function getSubplacesFromGame(placeId) {
     return subplaces_list
 }
 
-async function getPlaceIdThumbnail(placeId) {
-    let r = await fetch(`https://thumbnails.roblox.com/v1/places/gameicons?placeIds=${placeId}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false&_extreq`, {
+async function getPlaceIdThumbnail(placeId, size="512x512", format="Png", isCircular=false) {
+    let r = await fetch(`https://thumbnails.roblox.com/v1/places/gameicons?placeIds=${placeId}&returnPolicy=PlaceHolder&size=${size}&format=${format}&isCircular=${isCircular}&_extreq`, {
         "headers": {
             "accept": "application/json, text/plain, */*",
         },
@@ -162,72 +162,14 @@ async function getCookie() {
     return cookie
 }
 
-async function getServersFromPlaceId(placeId) {
-    let server_list = []
-    let cursor = ""
-
-    while (true) {
-        while (true) {
-            try {
-                const r = await fetch(`https://games.roblox.com/v1/games/${placeId}/servers/Public?limit=100&sortOrder=Desc&excludeFullGames=true&cursor=${cursor}&_extreq`, {
-                    method: "GET",
-                    credentials: "include"
-                })
-
-                if (r.status === 429) {
-
-                    console.warn(`Rate limited, retrying in 2s...`)
-                    await new Promise(resolve => setTimeout(resolve, 2000))
-                    continue // retry same cursor
-                }
-
-                const data = await r.json()
-                console.log(data)
-                server_list.push(...(data["data"] || []))
-                cursor = data["nextPageCursor"]
-                break
-            } catch {
-                continue
-            }
-        }
-
-        if (!cursor) break
-    }
-    
-    cursor = ""
-    while (true) {
-        while (true) {
-            try {
-                const r = await fetch(`https://games.roblox.com/v1/games/${placeId}/servers/Public?limit=100&sortOrder=Asc&excludeFullGames=true&cursor=${cursor}&_extreq`, {
-                    method: "GET",
-                    credentials: "include"
-                })
-
-                if (r.status === 429) {
-
-                    console.warn(`Rate limited, retrying in 2s...`)
-                    await new Promise(resolve => setTimeout(resolve, 2000))
-                    continue // retry same cursor
-                }
-
-                const data = await r.json()
-                console.log(data)
-                server_list.push(...(data["data"] || []))
-                cursor = data["nextPageCursor"]
-                break
-            } catch {
-                continue
-            }
-        }
-
-        if (!cursor) break
-    }
-
-    return server_list
+async function getUsersThumbnail(userIds, size="420x420", format="Png", isCircular=false) {
+    const r = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIds.join()}&size=${size}&format=${format}&isCircular=${isCircular}&_extreq`, { credentials: "include" })
+    const data = await r.json()
+    return data.data
 }
 
 async function joinInstanceInfo(placeId, serverIds) {
-    const r = await fetch(`https://api-servers.juliozapatahernandez2006.workers.dev/joingame-instance?_extreq`, {
+    const r = await fetch(`https://api-servers.juliozapatahernandez2006.workers.dev/join-game-instance?_extreq`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -244,7 +186,7 @@ async function joinInstanceInfo(placeId, serverIds) {
 
 async function getRobux() {
     let userId = await getLoggedInUserId()
-    const r = await fetch(`https://economy.roblox.com/v1/users/${userId}/currency`, { credentials: "include" })
+    const r = await fetch(`https://economy.roblox.com/v1/users/${userId}/currency?_extreq`, { credentials: "include" })
     const data = await r.json()
 
     return data.robux
