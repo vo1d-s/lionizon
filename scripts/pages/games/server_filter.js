@@ -1,4 +1,4 @@
-function performantSort(servers) {
+function performantSort(servers, ascending = false) {
     const valid = servers.filter(s => s.fps != null && s.ping != null && !isNaN(s.fps) && !isNaN(s.ping));
 
     const maxFps  = valid.reduce((max, s) => Math.max(max, s.fps), -Infinity);
@@ -13,7 +13,7 @@ function performantSort(servers) {
         return (fpsScore + pingScore) / 2;
     };
 
-    return [...valid].sort((a, b) => score(b) - score(a));
+    return [...valid].sort((a, b) => ascending ? score(a) - score(b) : score(b) - score(a));
 }
 
 let originalHTML = null;
@@ -106,6 +106,7 @@ async function applyServerFilter(filter_mode) {
 
     let loadMoreBtn = document.querySelector(".rbx-public-running-games-footer");
     loadMoreBtnClone = loadMoreBtn.cloneNode(true);
+    loadMoreBtnClone.classList.add("cloned-btn")
     loadMoreBtn.style.display = "none";
 
     let current_shown_idx = 0;
@@ -193,25 +194,21 @@ async function applyServerFilter(filter_mode) {
     container.after(loadMoreBtnClone);
 }
 
-observeElement(".server-list-options", (el) => {
-    el.insertAdjacentHTML("beforeend", `
-    <div class="rbx-select-group select-group">
-        <select id="filter-select" class="input-field rbx-select select-option">
-            <option value="default">Roblox Default</option>
-            <option value="performant">Most performant</option>
-        </select>
-        <span class="icon-arrow icon-down-16x16"></span>
-    </div>
-    `)
+if (window.location.href.includes("/games/")) {
+    observeElement(".server-list-options", (el) => {
+        el.insertAdjacentHTML("beforeend", `
+        <div class="rbx-select-group select-group">
+            <select id="filter-select" class="input-field rbx-select select-option" style="margin-left:100%">
+                <option value="default">Roblox Default</option>
+                <option value="performant">Most performant</option>
+            </select>
+            <span class="icon-arrow icon-down-16x16"></span>
+        </div>
+        `)
 
-    const filter_select = el.querySelector("div #filter-select")
-    filter_select.addEventListener("change", () => {
-        if (filter_select.value === "performant") {
-            applyServerFilter("performant");
-        } else {
-            applyServerFilter("default")
-        }
-    });
-})
-
-//setTimeout(applyServerFilter, 5000);
+        const filter_select = el.querySelector("div #filter-select")
+        filter_select.addEventListener("change", () => {
+            applyServerFilter(filter_select.value);
+        });
+    })
+}
