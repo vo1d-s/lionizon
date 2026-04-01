@@ -1,6 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Lionizon",
+  "icons": {
+    "16": "assets/icons/cat16.png",
+    "48": "assets/icons/cat48.png",
+    "128": "assets/icons/cat128.png"
+  },
   "version": "1.0",
   "permissions": ["webRequest", "storage", "alarms", "cookies", "declarativeNetRequest", "declarativeNetRequestWithHostAccess"],
   "host_permissions": [
@@ -15,6 +20,7 @@
     {
       "matches": ["*://*.roblox.com/*"],
       "run_at": "document_start",
+      "all_frames": false,
       "css": [
         "css/cal-heatmap.css",
         "css/general.css",
@@ -33,13 +39,14 @@
         "scripts/pages/home/home.js",
         "scripts/pages/home/fast_buttons.js",
         "scripts/pages/general/settings.js",
-        "scripts/pages/general/robux_to_currency.js"
+        "scripts/pages/general/robux_to_currency.js",
+        "scripts/pages/games/server_filter.js"
       ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["scripts/pages/games/inject.js"],
+      "resources": ["scripts/pages/games/inject.js", "assets/*"],
       "matches": ["*://*.roblox.com/*"]
     }
   ],

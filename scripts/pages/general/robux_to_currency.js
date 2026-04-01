@@ -8,11 +8,9 @@ async function getConversionRate(currency, amount) {
 }
 
 (async () => {
-    const { data: saved_settings, success } = await loadData("lionizon_settings", {}, true)
+    const saved_settings = await loadData("lionizon_settings", { currency: "USD", convert_rbx_to_currency: "Enabled" })
+    await saveData({ lionizon_settings: saved_settings })
 
-    if (!success) {
-        await saveData({ lionizon_settings: { ...saved_settings, currency: "USD", convert_rbx_to_currency: "Enabled" }})
-    }
     let convert_enabled = saved_settings.convert_rbx_to_currency === "Enabled"
     let chosen_currency = saved_settings.currency
 
@@ -26,8 +24,6 @@ async function getConversionRate(currency, amount) {
         converted = await getConversionRate(chosen_currency, current_rbx_to_eur)
         converted = (converted ?? current_rbx_to_eur).toFixed(2)
     }
-
-    console.log(current_rbx, current_rbx_to_eur, converted)
 
     log("CONVERSION RATES", converted)
 

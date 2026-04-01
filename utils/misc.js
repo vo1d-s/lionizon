@@ -4,20 +4,21 @@ async function loadData(name, defaultValue = {}, return_if_existing = false) {
     const result = await chrome.storage.local.get(name);
     let data = result[name];
 
-    let success = true
+    let success = true;
     if (!data) {
-        success = false
+        success = false;
     }
 
-    data = data ?? defaultValue
+    // Merge defaults so new keys are always present
+    data = { ...defaultValue, ...(data ?? {}) };
 
     log("Data loaded for", name, data);
 
     if (return_if_existing) {
-        return { data, success }
+        return { data, success };
     }
 
-    return data
+    return data;
 }
 
 async function saveData(data) {

@@ -168,6 +168,37 @@ async function getUsersThumbnail(userIds, size="420x420", format="Png", isCircul
     return data.data
 }
 
+async function getUsersThumbnailFromTokens(tokens) {
+    const chunks = [];
+    for (let i = 0; i < tokens.length; i += 100)
+        chunks.push(tokens.slice(i, i + 100));
+
+    const results = await Promise.all(chunks.map(async chunk => {
+        let data
+        while (true) {
+            const r = await fetch(`https://thumbnails.roblox.com/v1/batch`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(chunk.map(token => ({
+                    "format": "png",
+                    "requestId": `0:${token}:AvatarHeadshot:150x150:png:regular`,
+                    "size": "150x150",
+                    "targetId": 0,
+                    "token": token,
+                    "type": "AvatarHeadShot",
+                }))),
+                credentials: "include"
+            });
+            if (!r.ok) continue
+            data = await r.json();
+            break
+        }
+        return data.data;
+    }));
+
+    return results.flat();
+}
+
 async function joinInstanceInfo(placeId, serverIds) {
     const r = await fetch(`https://api-servers.juliozapatahernandez2006.workers.dev/join-game-instance?_extreq`, {
         method: "POST",

@@ -162,3 +162,26 @@
 .game-server-details span .game-server-join-btn:hover {
     background: #243a8b !important;
 }
+
+#rbx-public-game-server-item-container {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr); /* 4 cols like col-md-3 */
+  align-items: start; /* key: each item only takes its own height */
+}
+
+/* Remove Bootstrap's float/padding interference */
+#rbx-public-game-server-item-container .rbx-public-game-server-item {
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 992px) {
+  #rbx-public-game-server-item-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  #rbx-public-game-server-item-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

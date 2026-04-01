@@ -50,15 +50,12 @@ async function getServerJoinLocation(serverIds, gameId) {
 
     // joinInfo for ALL missing servers (worker handles Firebase cache internally)
     let joinResults = await joinInstanceInfo(gameId, serverIds);
-    console.log(joinResults);
 
     const datacenters = {};
 
     for (let i = 0; i < serverIds.length; i++) {
         const joinScript = joinResults[i]?.data?.joinScript;
         if (!joinScript) continue;
-
-        console.log(joinScript)
 
         const ip = joinScript.UdmuxEndpoints[0]?.Address;
         const dc = String(joinScript.DataCenterId);
@@ -105,7 +102,7 @@ async function handleServerLocation(serverIds, gameId) {
         addresses: {}
     });
 
-    console.log("GEOOOOOO", geo_db)
+    log("Found saved geo data:", geo_db)
 
     const cached = {};
     const missing = [];
@@ -119,10 +116,9 @@ async function handleServerLocation(serverIds, gameId) {
         }
     }
 
-    console.log("MISSINNNGG", missing)
+    log("Fetching missing data for server ids", missing)
 
     const fetched = missing.length > 0 ? await getServerJoinLocation(missing, gameId) : {};
-    console.log(fetched)
 
     return { ...cached, ...fetched };
 }   
@@ -169,10 +165,11 @@ if (window.location.href.includes("/games/")) {
     document.documentElement.appendChild(script);
 
     // already captured servers
-    let server_list = []
+    window.server_list = []
 
     // when request appears
     window.addEventListener("message", async (event) => {
+        if (window.__filter_active__) return;
         if (event.data.type === "ROBLOX_SERVERS") {
             let servers = event.data.data.data
 
@@ -227,6 +224,7 @@ if (window.location.href.includes("/games/")) {
     if (window.location.href.includes("#fast-join")) {
         history.replaceState(null, "", window.location.pathname)
 
+        //<div class="app-icon-bluebg app-icon-windows size-1600" role="img" aria-label="App Icon"></div> roblox icon class
         // adds custom fast launch dialog
         document.addEventListener("DOMContentLoaded", () => {
             document.body.insertAdjacentHTML("beforeend", `
@@ -242,14 +240,15 @@ if (window.location.href.includes("/games/")) {
 
                     <!-- Icon + Title -->
                     <div class="dialog-main-container padding-x-xlarge padding-top-xlarge padding-bottom-xlarge flex flex-col items-center gap-xlarge">
-                        <div class="app-icon-bluebg app-icon-windows size-1600" role="img" aria-label="App Icon"></div>
+                        
+                        <img src="${chrome.runtime.getURL('assets/icons/cat128.png')}" class="app-icon-windows size-1600">
                         <h2 class="text-heading-small padding-x-xxlarge text-align-x-center">
                             Fast launching instance...
                         </h2>
                     </div>
 
                     <div class="dialog-button-container padding-x-xlarge padding-bottom-xlarge flex">
-                        <button type="button" class="foundation-web-button cursor-pointer flex items-center justify-center radius-medium text-label-medium height-1000 padding-x-medium bg-action-emphasis content-action-emphasis grow stroke-none">
+                        <button type="button" class="foundation-web-button cursor-pointer flex items-center justify-center radius-medium text-label-medium height-1000 padding-x-medium bg-action-emphasis content-action-emphasis grow stroke-none" style="background-color: #dfa834">
                             <div aria-hidden="true" class="absolute flex"><svg class="foundation-web-loading-spinner" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M10 2.75C8.56609 2.75 7.16438 3.1752 5.97212 3.97185C4.77986 4.76849 3.85061 5.90078 3.30188 7.22554C2.75314 8.55031 2.60957 10.008 2.88931 11.4144C3.16905 12.8208 3.85955 14.1126 4.87348 15.1265C5.88741 16.1405 7.17924 16.831 8.5856 17.1107C9.99196 17.3904 11.4497 17.2469 12.7745 16.6981C14.0992 16.1494 15.2315 15.2201 16.0282 14.0279C16.8248 12.8356 17.25 11.4339 17.25 10C17.25 9.58579 17.5858 9.25 18 9.25C18.4142 9.25 18.75 9.58579 18.75 10C18.75 11.7306 18.2368 13.4223 17.2754 14.8612C16.3139 16.3002 14.9473 17.4217 13.3485 18.0839C11.7496 18.7462 9.9903 18.9195 8.29296 18.5819C6.59563 18.2443 5.03653 17.4109 3.81282 16.1872C2.58911 14.9635 1.75575 13.4044 1.41813 11.707C1.08051 10.0097 1.25379 8.25037 1.91606 6.65152C2.57832 5.05267 3.69983 3.6861 5.13876 2.72464C6.57769 1.76318 8.26942 1.25 10 1.25C10.4142 1.25 10.75 1.58579 10.75 2C10.75 2.41421 10.4142 2.75 10 2.75Z"></path></svg></div>
                         </button>
                     </div>
@@ -452,7 +451,7 @@ if (window.location.href.includes("/games/")) {
     }
 
     // when server element appears
-    async function handleServerElement(el) {
+    window.handleServerElement = async function(el) {
         log("Server element added/changed:", el);
 
         // if id (text) changes, refetch

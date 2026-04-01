@@ -53,7 +53,7 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
     function createDropdown(anchorEl, options, onSelect) {
         const theme = [...document.querySelector("#rbx-body").classList].find(c => c.includes("dark") || c.includes("light"))
         
-        console.log("EXTRACTED CURRENT THEME", theme)
+        console.log("User theme:", theme)
 
         document.querySelector(".lionizon-dropdown")?.remove()
 
@@ -172,7 +172,6 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
         anchorEl.addEventListener("click", async () => {
             createDropdown(anchorEl, options, async (selected) => {
                 anchorEl.querySelector("span").textContent = selected
-                console.log(selected)
                 dbSet(db, db_path, selected)
                 await saveData({ lionizon_settings: db })
             })
@@ -184,7 +183,7 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
     async function showLionizonPanel() {
         const settings = await loadData("lionizon_settings")
 
-        console.log("SHOW PANEL")
+        log("Showing panel.")
 
         const run = async (tabcontent) => {
             document.querySelectorAll("#settings-container .menu-vertical li a").forEach(tab => {
@@ -192,14 +191,25 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
             })
             document.querySelector("#settings-container .menu-vertical #lionizon-settings a")?.classList.add("active")
 
-            tabcontent.innerHTML = `
+            tabcontent.innerHTML = ""
+
+            tabcontent.insertAdjacentHTML("beforeend", `
             <div class="container-header">
                 <h2 class="text-heading-small">General Settings</h2>
             </div>
-            `
+            `)
 
-            convert_to_currency_select = await dropdownBuilder("Convert robux to currency?", "Enabled", settings, "convert_rbx_to_currency", ["Enabled", "Disabled"])
-            currency_select = await dropdownBuilder("Currency", "USD", settings, "currency", currencies)
+            await dropdownBuilder("Home welcome banner", "Enabled", settings, "home_banner_enabled", ["Enabled", "Disabled"])
+            await dropdownBuilder("User presence circles", "Enabled", settings, "user_presence_circles", ["Enabled", "Disabled"])
+
+            tabcontent.insertAdjacentHTML("beforeend", `
+            <div class="container-header">
+                <h2 class="text-heading-small">Robux Settings</h2>
+            </div>
+            `)
+
+            await dropdownBuilder("Convert robux to currency?", "Enabled", settings, "convert_rbx_to_currency", ["Enabled", "Disabled"])
+            await dropdownBuilder("Currency", "USD", settings, "currency", currencies)
         }
 
         const existing = document.querySelector(".tab-content .tab-pane")
@@ -211,7 +221,7 @@ if (/roblox\.\w+\/my\/account/.test(window.location.href)) {
     }
 
     function hideLionizonPanel() {
-        console.log("HIDE PANEL")
+        log("Hiding panel.")
 
         const lionizonTab = document.querySelector("#settings-container .menu-vertical #lionizon-settings a")
         lionizonTab.classList.remove("active")
