@@ -1,4 +1,10 @@
 (async () => {
+    function formatNumber(n) {
+        if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M+`;
+        if (n >= 1_000) return `${Math.floor(n / 1_000)}K+`;
+        return n.toString();
+    }
+
     const saved_settings = await loadData("lionizon_settings", { home_banner_enabled: true, user_presence_circles: true })
     await saveData({ lionizon_settings: saved_settings })
 
@@ -54,19 +60,46 @@
                         observedTiles.add(tile)
                         observeAdded("div", async (el) => {
                             if (el.style.position === "absolute") {
+                                let game_details = await getGameDetails(universeId, true)
+                                let playing = formatNumber(game_details.playing)
+                                let votes = await getGameVotes(universeId, true)
+                                let vote_percentage = Math.round((votes.upVotes / (votes.upVotes + votes.downVotes)) * 100);
+
                                 const results = await handleServerLocation([serverId], placeId)
                                 let location = results[serverId]?.location
                                 let popup_info = el.querySelector(".friend-presence-info")
 
-                                if (location) {
-                                    popup_info.children[0].insertAdjacentHTML("afterend",`
-                                        <p style="font-size: 14px">${location}</p>
-                                    `)
-                                } else {
-                                    popup_info.children[0].insertAdjacentHTML("afterend",`
-                                        <p style="font-size: 14px">Full or reserved server</p>
-                                    `)
-                                }
+                                let location_html = location 
+                                ? `
+                                <div class="flex items-center full-white-text" style="gap:8px; margin-bottom: 10px;">
+                                    <div class="location-flag-container">
+                                        <img src="https://hatscripts.github.io/circle-flags/flags/${results[serverId].country.toLowerCase()}.svg">
+                                    </div>
+                                    <p style="font-size: 14px">${location}</p>
+                                </div>
+                                `
+                                : `
+                                <div class="flex items-center full-white-text" style="gap:8px; margin-bottom: 5px;">
+                                    <div class="location-flag-container">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ban-icon lucide-ban"><circle cx="12" cy="12" r="10"/><path d="M4.929 4.929 19.07 19.071"/></svg>
+                                    </div>
+                                    <p style="font-size: 14px">Full or reserved server</p>
+                                </div>
+                                `
+
+                                popup_info.children[0].insertAdjacentHTML("afterend",`
+                                    <div class="flex items-center full-white-text" style="gap:5px; margin-top:5px; margin-bottom:5px !important;">
+                                        <div class="horizontal-pill flex items-center small-pill" style="gap:5px">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                                            <p>${playing}</p>
+                                        </div>
+                                        <div class="horizontal-pill flex items-center small-pill" style="gap:5px">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
+                                            <p>${vote_percentage}%</p>
+                                        </div>
+                                    </div>
+                                    ${location_html}
+                                `)
                             }
                         }, tile)
                     }

@@ -77,8 +77,8 @@ async function getUniverseId(placeId) {
     return data["universeId"]
 }
 
-async function getGameDetails(placeId) {
-    const universeId = await getUniverseId(placeId)
+async function getGameDetails(placeId, is_universe_id=false) {
+    const universeId = is_universe_id ? placeId : await getUniverseId(placeId)
 
     let r = await fetch(`https://games.roblox.com/v1/games?universeIds=${universeId}&_extreq`, {
         "headers": {
@@ -89,6 +89,20 @@ async function getGameDetails(placeId) {
     })
     let data = await r.json()
     return data["data"][0]
+}
+
+async function getGameVotes(placeId, is_universe_id=false) {
+    const universeId = is_universe_id ? placeId : await getUniverseId(placeId)
+
+    let r = await fetch(`https://games.roblox.com/v1/games/${universeId}/votes?_extreq`, {
+        "headers": {
+            "accept": "application/json, text/plain, */*",
+        },
+        "method": "GET",
+        "credentials": "include"
+    })
+    let data = await r.json()
+    return data
 }
 
 async function getSubplacesFromGame(placeId) {

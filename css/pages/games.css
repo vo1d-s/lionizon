@@ -135,15 +135,29 @@
     padding: 0px 9px 0px 9px !important;
 }
 
-.info-wrapper .horizonal-pill p {
-    font-size: 11px !important;
+.horizontal-pill p {
+    font-size: 12px !important;
 }
 
-.info-wrapper .horizonal-pill svg {
-    width: 14px !important;
+.horizontal-pill svg {
+    width: 15px !important;
 }
 
-.info-wrapper div .location-flag-container img {
+/*
+.horizontal-pill.small-pill p {
+    font-size: 9px !important;
+}
+
+.horizontal-pill.small-pill svg {
+    width: 11px !important;
+}*/
+
+.full-white-text * {
+    color: var(--color-content-emphasis) !important
+}
+
+.location-flag-container img, 
+.location-flag-container svg {
     width: 20px;
     height: 20px;
     object-fit: contain;
