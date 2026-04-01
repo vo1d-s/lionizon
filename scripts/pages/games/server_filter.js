@@ -192,7 +192,7 @@ if (window.location.href.includes("/games/")) {
     observeElement(".server-list-options", (el) => {
         el.insertAdjacentHTML("beforeend", `
         <div class="rbx-select-group select-group">
-            <select id="filter-select" class="input-field rbx-select select-option" style="margin-left:100%">
+            <select id="filter-select" class="input-field rbx-select select-option" style="margin-left:20px">
                 <option value="default">Roblox Default</option>
                 <option value="performant">Most performant</option>
             </select>
