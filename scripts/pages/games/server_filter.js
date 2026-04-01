@@ -18,7 +18,7 @@ function performantSort(servers, ascending = false) {
 
 let originalHTML = null;
 let originalServerList = null;
-let loadMoreBtnClone = null; // ← fuera
+let loadMoreBtnClone = null;
 
 async function applyServerFilter(filter_mode) {
     const container = document.querySelector("#rbx-public-game-server-item-container");
@@ -30,7 +30,7 @@ async function applyServerFilter(filter_mode) {
         container.innerHTML = originalHTML;
         loadMoreBtnClone?.remove();
         document.querySelector(".rbx-public-running-games-footer").style.removeProperty("display");
-        originalHTML = null; // reset para próxima vez
+        originalHTML = null;
         originalServerList = null;
         return;
     }
@@ -93,7 +93,6 @@ async function applyServerFilter(filter_mode) {
         });
     }
 
-    // Player thumbnails
     const plr_thumbnails = await getUsersThumbnailFromTokens(sorted.flatMap(s => s.playerTokens));
     let tidx = 0;
     const serverThumbs = Object.fromEntries(sorted.map(s => {
@@ -175,12 +174,7 @@ async function applyServerFilter(filter_mode) {
             handleServerElement(li.querySelector(".card-item"));
         });
 
-        // resuelve las localizaciones para que handleServerElement las pinte
-        handleServerLocation(batch.map(s => s.id), pageGameId).then(locations => {
-            for (const [serverId, data] of Object.entries(locations)) {
-                resolveLocation(serverId, data);
-            }
-        });
+        processServersLocationBatch(batch, pageGameId);
 
         current_shown_idx += 12;
         if (current_shown_idx >= sorted.length) loadMoreBtnClone.style.display = "none";
@@ -188,7 +182,7 @@ async function applyServerFilter(filter_mode) {
 
     searchingDialog.remove()
 
-    loadNextBatch(); // carga el primer batch
+    loadNextBatch(); // first batch
 
     loadMoreBtnClone.addEventListener("click", loadNextBatch);
     container.after(loadMoreBtnClone);

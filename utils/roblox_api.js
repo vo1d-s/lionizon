@@ -217,7 +217,8 @@ async function joinInstanceInfo(placeId, serverIds) {
     const r = await fetch(`https://api-servers.juliozapatahernandez2006.workers.dev/join-game-instance?_extreq`, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Origin": "https://www.roblox.com/"
         },
         body: JSON.stringify({
             "placeId": placeId,

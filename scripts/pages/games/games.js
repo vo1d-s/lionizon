@@ -39,15 +39,13 @@ function resolveQueue(serverId, value) {
 }
 
 // returns a promise that resolves when the location for this server is known
-// if found, returns, if waits 10s and it isnt there, keep default full text
 function waitForQueue(serverId, timeout = 10000) {
-    if (queueCache[serverId]) return Promise.resolve(queueCache[serverId]);
+    if (queueCache[serverId] !== undefined) return Promise.resolve(queueCache[serverId]);
 
     return new Promise((resolve, reject) => {
         if (!queueResolvers[serverId]) queueResolvers[serverId] = [];
         queueResolvers[serverId].push(resolve);
-
-        setTimeout(() => reject(`Timeout waiting for location ${serverId}`), timeout);
+        setTimeout(() => reject(`Timeout waiting for queue ${serverId}`), timeout);
     });
 }
 
@@ -55,7 +53,7 @@ async function getIPLocation(datacenters, placeId) {
     try {
         const res = await fetch(`${IP_API_URL}/geolocate`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "Origin": "https://www.roblox.com/" },
             body: JSON.stringify({ datacenters, placeId: placeId })
         });
         const data = await res.json();
@@ -64,95 +62,80 @@ async function getIPLocation(datacenters, placeId) {
     } catch (e) {
         console.error("IP lookup failed", e);
     }
-}
+} 
 
-// this is for servers that arent already saved
-async function getServerJoinLocation(serverIds, gameId) {
-    log("Getting join info for servers");
+async function processServersLocationBatch(serversInRequest, gameId) {
+    const serverIds = serversInRequest.map(s => s.id);
+    log("Processing batch of", serverIds.length, "servers");
+
+    // get every server info
+    const joinResults = await joinInstanceInfo(gameId, serverIds);
+    if (!joinResults) return;
 
     let geo_db = await loadData("geo_db", { servers: {}, addresses: {} });
-
-    // joinInfo for ALL missing servers (worker handles Firebase cache internally)
-    let joinResults = await joinInstanceInfo(gameId, serverIds);
-
-    const datacenters = {};
+    const datacentersToFetch = {};
 
     for (let i = 0; i < serverIds.length; i++) {
-        resolveQueue(serverIds[i], joinResults[i]?.data?.queuePosition ?? 0)
+        const id = serverIds[i];
+        const apiData = joinResults[i]?.data;
 
-        const joinScript = joinResults[i]?.data?.joinScript;
-        if (!joinScript) continue;
+        // resolve every server queue
+        resolveQueue(id, apiData?.queuePosition ?? 0);
 
-        const ip = joinScript.UdmuxEndpoints[0]?.Address;
-        const dc = String(joinScript.DataCenterId);
+        // if its in cache then skip
+        if (locationCache[id]) continue;
 
-        if (!ip || !dc) continue
-
-        // still use local address cache to avoid even sending to the worker
-        if (geo_db.addresses[ip]) {
-            geo_db.servers[serverIds[i]] = { ip, ...geo_db.addresses[ip] };
+        // if its in storage then resolve with that saved data
+        if (geo_db.servers[id]) {
+            resolveLocation(id, geo_db.servers[id]);
             continue;
         }
 
-        if (!datacenters[dc]) datacenters[dc] = {};
-        if (!datacenters[dc][ip]) datacenters[dc][ip] = [];
-        datacenters[dc][ip].push(serverIds[i]);
+        // if not saved or cached, then get joinscript
+        const joinScript = apiData?.joinScript;
+        if (!joinScript) {
+            continue; 
+        }
+
+        const ip = joinScript.UdmuxEndpoints[0]?.Address;
+        const dc = String(joinScript.DataCenterId);
+        if (!ip || !dc) continue;
+
+        // check if ip exists
+        if (geo_db.addresses[ip]) {
+            const data = { ip, ...geo_db.addresses[ip] };
+            geo_db.servers[id] = data;
+            resolveLocation(id, data);
+            continue;
+        }
+
+        // if it doesnt, push to table for fetching
+        if (!datacentersToFetch[dc]) datacentersToFetch[dc] = {};
+        if (!datacentersToFetch[dc][ip]) datacentersToFetch[dc][ip] = [];
+        datacentersToFetch[dc][ip].push(id);
     }
 
-    if (Object.keys(datacenters).length > 0) {
-        const locations = await getIPLocation(datacenters, gameId);
-
-        for (const [serverId, loc] of Object.entries(locations)) {
-            const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
-            const info = {
-                country: loc.country, country_name: loc.country_name, city: loc.city,
-                region: loc.region, region_code: loc.region_code,
-                latitude: loc.latitude, longitude: loc.longitude,
-                timezone: loc.timezone, postal_code: loc.postal_code, continent: loc.continent,
-            };
-            geo_db.servers[serverId] = { ip: loc.ip, location, ...info };
-            geo_db.addresses[loc.ip] = { location, ...info };
+    // just fetch the missing ones
+    if (Object.keys(datacentersToFetch).length > 0) {
+        const locations = await getIPLocation(datacentersToFetch, gameId);
+        if (locations) {
+            for (const [serverId, loc] of Object.entries(locations)) {
+                const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
+                const info = {
+                    country: loc.country, country_name: loc.country_name, city: loc.city,
+                    region: loc.region, region_code: loc.region_code,
+                    latitude: loc.latitude, longitude: loc.longitude,
+                    timezone: loc.timezone, postal_code: loc.postal_code, continent: loc.continent,
+                };
+                const finalData = { ip: loc.ip, location, ...info };
+                geo_db.servers[serverId] = finalData;
+                geo_db.addresses[loc.ip] = { location, ...info };
+                resolveLocation(serverId, finalData);
+            }
+            saveData({ geo_db });
         }
     }
-
-    const locationResults = Object.fromEntries(
-        serverIds.map(id => [id, geo_db.servers[id]]).filter(([, v]) => v)
-    );
-
-    saveData({ geo_db });
-
-    return locationResults;
 }
-
-// fetch saved db for server details
-async function handleServerLocation(serverIds, gameId) {
-    if (!serverIds) return;
-
-    const geo_db = await loadData("geo_db", {
-        servers: {},
-        addresses: {}
-    });
-
-    log("Found saved geo data:", geo_db)
-
-    const cached = {};
-    const missing = [];
-
-    // fetches the ones that are missing
-    for (const id of serverIds) {
-        if (geo_db.servers[id]) {
-            cached[id] = geo_db.servers[id];
-        } else {
-            missing.push(id);
-        }
-    }
-
-    log("Fetching missing data for server ids", missing)
-
-    const fetched = missing.length > 0 ? await getServerJoinLocation(missing, gameId) : {};
-
-    return { ...cached, ...fetched };
-}   
 
 // separate player and rating in game cards
 //observeAdded(".game-card-info", (el) => {
@@ -179,18 +162,9 @@ if (window.location.href.includes("/games/")) {
     const pageGameId = parseInt(window.location.href.split("games/")[1].split("/")[0])
     log(`User loaded game ${pageGameId}`)
 
-    //;(async () => {
-    //    let all_servers = await getServersFromPlaceId(pageGameId)
-    //    let all_servers_loc = await handleServerLocation(all_servers.map(s => s.id), pageGameId)
-//
-    //    console.log(all_servers, all_servers_loc)
-    //})();
-    
-
-
     /* --------------------------- Server geolocation --------------------------- */
 
-    // Intercept servers request
+    // intercept servers request
     const script = document.createElement("script");
     script.src = chrome.runtime.getURL("scripts/pages/games/inject.js");
     document.documentElement.appendChild(script);
@@ -202,29 +176,19 @@ if (window.location.href.includes("/games/")) {
     window.addEventListener("message", async (event) => {
         if (window.__filter_active__) return;
         if (event.data.type === "ROBLOX_SERVERS") {
-            let servers = event.data.data.data
-
-            //const sssssssssssss = await getServersFromPlaceId(pageGameId)
-            //console.log(sssssssssssss)
+            let servers = event.data.data.data; // new servers
 
             const existingIds = new Set(server_list.map(s => s.id));
-            const newServers = servers.filter(s => !existingIds.has(s.id)); // just new servers that appeared
+            const newServers = servers.filter(s => !existingIds.has(s.id));
 
-            // adds them to server list
+            // full server lst
             server_list = [...server_list, ...newServers];
             log("Total shown servers:", server_list.length);
 
-            log(newServers)
-
-            // fetch every location if it isnt saved
-            const locations = await handleServerLocation(newServers.map(s => s.id), pageGameId);
-
-            // sends location for the element to wait
-            for (const [serverId, data] of Object.entries(locations)) {
-                resolveLocation(serverId, data);
-            }
+            // batch all servers
+            processServersLocationBatch(servers, pageGameId);
         }
-    });
+    })
 
     // download roblox dialog but in html for fast launch download
     download_roblox_dialog = `<div data-state="open" class="foundation-web-dialog-overlay padding-y-medium foundation-web-portal-zindex bg-common-backdrop" style="pointer-events: auto;"><div role="dialog" id="radix-3" aria-describedby="radix-5" aria-labelledby="radix-4" data-state="open" class="relative radius-large bg-surface-100 stroke-muted stroke-standard foundation-web-dialog-content shadow-transient-high install-dialog" data-size="Large" tabindex="-1" style="pointer-events: auto;"><div class="absolute foundation-web-dialog-close-container"><button type="button" class="foundation-web-close-affordance flex stroke-none bg-none cursor-pointer relative clip group/interactable focus-visible:outline-focus disabled:outline-none bg-over-media-100 padding-medium radius-circle" aria-label="Close"><div role="presentation" class="absolute inset-[0] transition-colors group-hover/interactable:bg-[var(--color-state-hover)] group-active/interactable:bg-[var(--color-state-press)] group-disabled/interactable:bg-none"></div><span role="presentation" class="grow-0 shrink-0 basis-auto icon icon-regular-x size-[var(--icon-size-large)]"></span></button></div><div class="padding-x-xlarge padding-top-xlarge padding-bottom-xlarge content-default"><div class="flex flex-col gap-xlarge padding-xlarge"><div class="flex flex-col gap-xsmall"><h2 id="radix-4" class="text-heading-medium content-emphasis padding-none">Thanks for downloading Roblox</h2><p class="text-body-large">Just follow the steps below to install Roblox. Download should start in a few seconds. If it doesn't, <a href="https://www.roblox.com/download/client?os=win" class="download-link-underline">restart the download</a>.</p></div><div></div> <div class="flex gap-xxlarge"><section class="flex flex-col gap-large grow basis-0"><h3 class="text-title-large content-emphasis padding-none">Install Instructions</h3><ol class="download-instructions-list flex flex-col gap-xlarge margin-none padding-left-large text-body-medium"><li class="padding-left-medium">Once downloaded, double-click the <b>RobloxPlayerInstaller.exe</b> file in your Downloads folder.</li><li class="padding-left-medium">Double-click the <b>RobloxPlayerInstaller</b> to install the app.</li><li class="padding-left-medium">Follow the instructions to install Roblox to your computer.</li><li class="padding-left-medium">Now that it’s installed, <a id="download-join-experience" class="download-link-underline">join the experience</a>.</li></ol></section><div></div> <div class="stroke-standard stroke-default"></div><div></div> <section class="flex flex-col grow basis-0 gap-xxlarge"><div class="flex flex-col gap-small"><h3 class="text-label-large content-emphasis padding-none">Don't forget the mobile app</h3><p class="text-body-medium">Scan this code with your phone's camera to get Roblox.</p></div><div class="flex grow justify-center items-center bg-shift-100 radius-medium padding-x-large"><div class="radius-medium padding-small bg-[white]"><img class="size-2100" src="https://images.rbxcdn.com/79852c254bf43f36.webp" alt=""></div></div></section></div></div></div></div></div>`
@@ -236,11 +200,10 @@ if (window.location.href.includes("/games/")) {
             const elapsed = now - start;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Easing function (ease-out)
             const eased = 1 - Math.pow(1 - progress, 3);
 
             const current = Math.round(from + (to - from) * eased);
-            element.textContent = current.toLocaleString(); // formats 200530 → "200,530"
+            element.textContent = current.toLocaleString(); // format like: 200530 → "200,530"
 
             if (progress < 1) {
                 requestAnimationFrame(update);
@@ -559,26 +522,10 @@ if (window.location.href.includes("/games/")) {
         }
     }
 
-    //let normalizeTimer = null;
-    //function normalizeServerCardHeights() {
-    //    clearTimeout(normalizeTimer);
-    //    normalizeTimer = setTimeout(() => {
-    //        const cards = [...document.querySelectorAll("#rbx-public-game-server-item-container .rbx-public-game-server-item .card-item")];
-//
-    //        for (let i = 0; i < cards.length; i += 4) {
-    //            const row = cards.slice(i, i + 4);
-    //            row.forEach(card => card.style.height = "");
-    //            const tallest = Math.max(...row.map(card => card.offsetHeight));
-    //            row.forEach(card => card.setAttribute("style", `height: ${tallest}px !important`));
-    //        }
-    //    }, 300);
-    //}
-
     observeElement("#rbx-public-game-server-item-container", (container) => {
         container.querySelectorAll(".rbx-public-game-server-item .card-item").forEach(handleServerElement);
         observeAdded(".rbx-public-game-server-item .card-item", (el) => {
             handleServerElement(el)
-            //normalizeServerCardHeights()
         }, container);
     });
 

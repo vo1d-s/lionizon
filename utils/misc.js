@@ -63,7 +63,7 @@ function observeAdded(selector, callback, parent = document) {
         })
     })
 
-    observer.observe(parent, { childList: true, subtree: true, attributes: true })
+    observer.observe(parent, { childList: true, subtree: true })
 }
 
 
