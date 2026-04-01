@@ -27,6 +27,30 @@ function waitForLocation(serverId, timeout = 10000) {
     });
 }
 
+const queueCache = {};
+const queueResolvers = {};
+
+function resolveQueue(serverId, value) {
+    queueCache[serverId] = value;
+    if (queueResolvers[serverId]) {
+        queueResolvers[serverId].forEach(resolve => resolve(value));
+        delete queueResolvers[serverId];
+    }
+}
+
+// returns a promise that resolves when the location for this server is known
+// if found, returns, if waits 10s and it isnt there, keep default full text
+function waitForQueue(serverId, timeout = 10000) {
+    if (queueCache[serverId]) return Promise.resolve(queueCache[serverId]);
+
+    return new Promise((resolve, reject) => {
+        if (!queueResolvers[serverId]) queueResolvers[serverId] = [];
+        queueResolvers[serverId].push(resolve);
+
+        setTimeout(() => reject(`Timeout waiting for location ${serverId}`), timeout);
+    });
+}
+
 async function getIPLocation(datacenters, placeId) {
     try {
         const res = await fetch(`${IP_API_URL}/geolocate`, {
@@ -54,6 +78,8 @@ async function getServerJoinLocation(serverIds, gameId) {
     const datacenters = {};
 
     for (let i = 0; i < serverIds.length; i++) {
+        resolveQueue(serverIds[i], joinResults[i]?.data?.queuePosition ?? 0)
+
         const joinScript = joinResults[i]?.data?.joinScript;
         if (!joinScript) continue;
 
@@ -89,8 +115,13 @@ async function getServerJoinLocation(serverIds, gameId) {
         }
     }
 
+    const locationResults = Object.fromEntries(
+        serverIds.map(id => [id, geo_db.servers[id]]).filter(([, v]) => v)
+    );
+
     saveData({ geo_db });
-    return Object.fromEntries(serverIds.map(id => [id, geo_db.servers[id]]).filter(([, v]) => v));
+
+    return locationResults;
 }
 
 // fetch saved db for server details
@@ -513,8 +544,14 @@ if (window.location.href.includes("/games/")) {
         const serverLocEl = infoWrapper.querySelector("div .server-location")
 
         try {
+            const joinBtn = serverDetails.querySelector("span .game-server-join-btn")
+
+            const server_queue = await waitForQueue(serverId)
+            joinBtn.textContent = joinBtn.textContent.split(" (")[0].trim() + (server_queue > 0 ? ` (${server_queue} in queue)` : "")
+
             const serverLocation = await waitForLocation(serverId);
             serverLocEl.textContent = serverLocation.location ?? "Full server";
+
             let flagContainer = infoWrapper.querySelector("div .location-flag-container")
             flagContainer.innerHTML = `<img src="https://hatscripts.github.io/circle-flags/flags/${serverLocation.country.toLowerCase()}.svg">`
         } catch (e) {
@@ -583,8 +620,8 @@ if (window.location.href.includes("/games/")) {
 
             panel.innerHTML = `
                 <img class="subplace-thumbnail" src="${subplaceThumb}">
-                <p class="subplace-title">${subplaceName}</p>
-                <p class="subplace-id">${subplaceId}</p>
+                <p class="subplace-title" style="color: var(--color-content-emphasis) !important;">${subplaceName}</p>
+                <p class="subplace-id info-label">${subplaceId}</p>
                 <button type="button" class="mini-playbtn-subplace"><span class="icon-common-play"></span></button>
             `
 

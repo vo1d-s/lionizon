@@ -44,9 +44,13 @@
 }
 
 .subplace-id {
-    font-size: 13px !important;
+    /*font-size: 13px !important;*/
     color: #a3a3a3 !important;
     margin-bottom: 10px;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
 }
 
 .mini-playbtn-subplace {
