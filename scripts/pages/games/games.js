@@ -16,14 +16,18 @@ function resolveLocation(serverId, value) {
 
 // returns a promise that resolves when the location for this server is known
 // if found, returns, if waits 10s and it isnt there, keep default full text
-function waitForLocation(serverId, timeout = 10000) {
-    if (locationCache[serverId]) return Promise.resolve(locationCache[serverId]);
+function waitForLocation(serverId, timeout = 3000) {
+    if (locationCache.hasOwnProperty(serverId)) return Promise.resolve(locationCache[serverId]);
 
     return new Promise((resolve, reject) => {
         if (!locationResolvers[serverId]) locationResolvers[serverId] = [];
         locationResolvers[serverId].push(resolve);
 
-        setTimeout(() => reject(`Timeout waiting for location ${serverId}`), timeout);
+        setTimeout(() => {
+            if (!locationCache.hasOwnProperty(serverId)) {
+                resolveLocation(serverId, null);
+            }
+        }, timeout);
     });
 }
 
@@ -39,7 +43,7 @@ function resolveQueue(serverId, value) {
 }
 
 // returns a promise that resolves when the location for this server is known
-function waitForQueue(serverId, timeout = 10000) {
+function waitForQueue(serverId, timeout = 3000) {
     if (queueCache[serverId] !== undefined) return Promise.resolve(queueCache[serverId]);
 
     return new Promise((resolve, reject) => {
@@ -118,6 +122,9 @@ async function processServersLocationBatch(serversInRequest, gameId) {
     // just fetch the missing ones
     if (Object.keys(datacentersToFetch).length > 0) {
         const locations = await getIPLocation(datacentersToFetch, gameId);
+
+        const attemptedIds = Object.values(datacentersToFetch).flatMap(ips => Object.values(ips)).flat();
+
         if (locations) {
             for (const [serverId, loc] of Object.entries(locations)) {
                 const location = loc.city ? `${loc.city}, ${loc.country_name}` : loc.country_name;
@@ -134,6 +141,12 @@ async function processServersLocationBatch(serversInRequest, gameId) {
             }
             saveData({ geo_db });
         }
+
+        attemptedIds.forEach(id => {
+            if (!locationCache[id]) {
+                resolveLocation(id, null); 
+            }
+        });
     }
 }
 
@@ -470,6 +483,13 @@ if (window.location.href.includes("/games/")) {
         const serverPing = serverInfo["ping"] || 80
         const serverFps = serverInfo["fps"]
 
+        function getPingStatus(ping) {
+            if (ping <= 40) return { color: "#59f6ff", text: "Elite" };
+            if (ping <= 120) return { color: "#75ff74", text: "Good" };
+            if (ping <= 200) return { color: "#ffe143", text: "Stable" };
+            return { color: "#ff4c4c", text: "Lagging" };
+        }
+
         serverIdText.textContent = `ID: ${serverId}`
 
         const serverDetails = el.querySelector(".game-server-details")
@@ -481,8 +501,8 @@ if (window.location.href.includes("/games/")) {
             infoWrapper.innerHTML = `
             <div class="flex items-center" style="gap:5px; margin-bottom:10px !important">
                 <div class="horizontal-pill flex items-center" style="gap:5px">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe-icon lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                    <p class="server-ping">${serverPing}ms</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="${getPingStatus(serverPing).color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe-icon lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    <p class="server-ping" style="color: ${getPingStatus(serverPing).color} !important">${serverPing}ms</p>
                 </div>
                 <div class="horizontal-pill flex items-center" style="gap:5px">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gauge-icon lucide-gauge"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
