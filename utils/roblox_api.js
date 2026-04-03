@@ -301,3 +301,10 @@ async function getAllServers(placeId) {
     const data = await r.json();
     return data
 }
+
+async function getBadgesAwardDate(badgeIds) {
+    const r = await fetch(`https://badges.roblox.com/v1/users/1504897220/badges/awarded-dates?badgeIds=${badgeIds.join(",")}`, { credentials: "include" })
+    const data = await r.json()
+
+    return data.data
+}
