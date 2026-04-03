@@ -25,7 +25,8 @@
         "css/cal-heatmap.css",
         "css/general.css",
         "css/pages/games.css",
-        "css/pages/settings.css"
+        "css/pages/settings.css",
+        "css/pages/40_method_popup.css"
       ],
       "js": [
         "lib/d3.v7.min.js",
@@ -40,7 +41,9 @@
         "scripts/pages/home/fast_buttons.js",
         "scripts/pages/general/settings.js",
         "scripts/pages/general/robux_to_currency.js",
-        "scripts/pages/games/server_filter.js"
+        "scripts/pages/games/server_filter.js",
+        "scripts/pages/catalog/40_method.js",
+        "scripts/pages/games/random_server.js"
       ]
     }
   ],

@@ -1,0 +1,61 @@
+.lionizon-price-row {
+    gap: 6px;
+}
+
+.lionizon-strikethrough {
+    position: relative;
+}
+
+.lionizon-strikethrough::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 105%;
+    height: 2px;
+    background: currentColor;
+}
+
+.lionizon-discount-badge {
+    font-size: 13px;
+    border-radius: 100px;
+    color: #9dd79f;
+    background: #1a4d1a;
+    padding: 0 5px;
+}
+
+.lionizon-savings-bar {
+    padding: 10px;
+    justify-content: space-between;
+    background: #1a4d1a;
+    color: #9dd79f;
+    border: 1px solid #9dd79f;
+    border-radius: 5px;
+    height: 40px;
+}
+
+.lionizon-buy-btn {
+    text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--color-content-emphasis), transparent 50%);
+    background: none;
+    flex: 1;
+}
+
+.lionizon-savings-robux-icon {
+    filter: brightness(0) saturate(100%) invert(90%) sepia(16%) saturate(722%) hue-rotate(64deg) brightness(89%) contrast(90%);
+}
+
+.lionizon-place-input {
+    border-radius: 5px;
+    background: var(--color-over-media-0);
+    border: 1px solid var(--color-common-shimmer);
+    outline: none;
+    padding: 10px;
+    width: 100%;
+}
+
+.lionizon-place-setup {
+    gap: 2px;
+    flex-direction: column;
+    display: flex;
+}

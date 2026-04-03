@@ -8,7 +8,7 @@
     const saved_settings = await loadData("lionizon_settings", { home_banner_enabled: true, user_presence_circles: true })
     await saveData({ lionizon_settings: saved_settings })
 
-    if (window.location.href.includes("/home") || (window.location.href.includes("/friends") && saved_settings.user_presence_circles)) {
+    if (window.location.href.includes("/home") || window.location.href.includes("/friends") || (window.location.href.includes("/users") && saved_settings.user_presence_circles)) {
 
         const previousStates = new Map() // userId -> currentGame
         const observedTiles = new Set()
@@ -139,7 +139,7 @@
     }
 
     // Welcome banner
-    if (window.location.href.includes("/home")) {
+    if (window.location.href.includes("/home") || window.location.href.includes("/users")) {
         observeElement(".rbx-left-col", (el) => el.classList.add("nav-show"));
 
         let banner_created = false;

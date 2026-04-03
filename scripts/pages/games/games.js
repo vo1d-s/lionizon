@@ -16,7 +16,7 @@ function resolveLocation(serverId, value) {
 
 // returns a promise that resolves when the location for this server is known
 // if found, returns, if waits 10s and it isnt there, keep default full text
-function waitForLocation(serverId, timeout = 3000) {
+function waitForLocation(serverId, timeout = 5000) {
     if (locationCache.hasOwnProperty(serverId)) return Promise.resolve(locationCache[serverId]);
 
     return new Promise((resolve, reject) => {
@@ -43,7 +43,7 @@ function resolveQueue(serverId, value) {
 }
 
 // returns a promise that resolves when the location for this server is known
-function waitForQueue(serverId, timeout = 3000) {
+function waitForQueue(serverId, timeout = 5000) {
     if (queueCache[serverId] !== undefined) return Promise.resolve(queueCache[serverId]);
 
     return new Promise((resolve, reject) => {

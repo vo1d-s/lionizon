@@ -76,12 +76,7 @@ async function applyServerFilter(filter_mode) {
         originalServerList = [...window.server_list];
     }
 
-    const r = await fetch("https://api-servers.juliozapatahernandez2006.workers.dev/get-all-servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ placeId: pageGameId })
-    });
-    const data = await r.json();
+    const data = await getAllServers(pageGameId)
 
     const seen = new Set();
     let sorted

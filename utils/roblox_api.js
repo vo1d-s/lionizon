@@ -237,3 +237,67 @@ async function getRobux() {
 
     return data.robux
 }
+
+async function getAssetInfo(assetId) {
+    let r = await fetch(`https://economy.roblox.com/v2/assets/${assetId}/details?_extreq`, { credentials: "include" })
+    let data = await r.json()
+
+    if (data.errors) {
+        return null
+    }
+
+    return data
+}
+
+async function getBundleInfo(bundleId) {
+    let r = await fetch(`https://catalog.roblox.com/v1/bundles/${bundleId}/details?_extreq`, { credentials: "include" })
+    let data = await r.json()
+
+    if (data.errors) {
+        return null
+    }
+
+    return data
+}
+
+async function getGamepassInfo(gamepassId) {
+    let r = await fetch(`https://apis.roblox.com/game-passes/v1/game-passes/${gamepassId}/product-info?_extreq`, { credentials: "include" })
+    let data = await r.json()
+
+    if (data.errors) {
+        return null
+    }
+
+    return data
+}
+
+async function getAssetThumbnail(assetId) {
+    let r = await fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${assetId}&size=420x420&format=Png&isCircular=false&_extreq`, { credentials: "include" })
+    let data = await r.json()
+
+    return data.data
+}
+
+async function getGamepassThumbnail(gamepassId) {
+    let r = await fetch(`https://thumbnails.roblox.com/v1/game-passes?gamePassIds=${gamepassId}&size=150x150&format=Png&isCircular=false&_extreq`, { credentials: "include" })
+    let data = await r.json()
+
+    return data.data
+}
+
+async function getBundleThumbnail(bundleId) {
+    let r = await fetch(`https://thumbnails.roblox.com/v1/bundles/thumbnails?bundleIds=${bundleId}&size=420x420&format=Png&_extreq`, { credentials: "include" })
+    let data = await r.json()
+
+    return data.data
+}
+
+async function getAllServers(placeId) {
+    const r = await fetch("https://api-servers.juliozapatahernandez2006.workers.dev/get-all-servers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ placeId })
+    });
+    const data = await r.json();
+    return data
+}
