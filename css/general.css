@@ -14,8 +14,12 @@
 	width: 185px !important;
 }
 
+#left-navigation-container .left-nav {
+    zoom: 0.8 !important;
+}
+
 #container-main {
-    margin-left: 185px !important;
+    margin-left: 230px !important;
 }
 
 .friend-carousel-container {
