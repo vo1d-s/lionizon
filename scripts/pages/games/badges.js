@@ -24,6 +24,7 @@ if (window.location.href.includes("/games/")) {
                             position: absolute;
                             background: black;
                             opacity: 0.25;
+                            pointer-events: none;
                         "></div>
                     `)
                     continue
