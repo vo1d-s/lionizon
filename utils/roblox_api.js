@@ -338,7 +338,8 @@ async function getAllServers(placeId) {
 }
 
 async function getBadgesAwardDate(badgeIds) {
-    const r = await fetch(`https://badges.roblox.com/v1/users/1504897220/badges/awarded-dates?badgeIds=${badgeIds.join(",")}`, { credentials: "include" })
+    const userId = await getLoggedInUserId()
+    const r = await fetch(`https://badges.roblox.com/v1/users/${userId}/badges/awarded-dates?badgeIds=${badgeIds.join(",")}`, { credentials: "include" })
     const data = await r.json()
 
     return data.data

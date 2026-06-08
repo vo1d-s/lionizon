@@ -59,7 +59,7 @@
                         let placeThumbnail = await getPlaceIdThumbnail(placeId)
                         const avatar_status = card.querySelector(".avatar-status")
                         avatar_status.insertAdjacentHTML("afterend", `
-                            <img src="${placeThumbnail}" style="position: absolute; height: 28px; right: 0; bottom: 0; border-radius: 7px;">
+                            <img src="${placeThumbnail}" class=".game-presence-preview" style="position: absolute; height: 28px; right: 0; bottom: 0; border-radius: 7px;">
                         `)
                     }
 

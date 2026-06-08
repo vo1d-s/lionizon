@@ -144,8 +144,7 @@
                         </div>
                     </div>
                     `
-
-                    console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                    
                     document.body.insertAdjacentHTML("beforeend", saveDialogHTML)
                     const saveDialog = document.querySelector(".lionizon-save-dialog")
 
