@@ -55,7 +55,7 @@
                     let placeId = presence.placeId
                     let universeId = presence.universeId
  
-                    if (saved_settings.game_presence_thumbnail_preview === "Enabled") {
+                    if (saved_settings.game_presence_thumbnail_preview === "Enabled" && placeId) {
                         let placeThumbnail = await getPlaceIdThumbnail(placeId)
                         const avatar_status = card.querySelector(".avatar-status")
                         avatar_status.insertAdjacentHTML("afterend", `
