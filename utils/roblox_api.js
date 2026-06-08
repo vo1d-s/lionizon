@@ -1,3 +1,36 @@
+// HELLO!
+// IMPORTANT: 
+// SOME ENDPOINTS SEND YOUR ROBLOSECURITY COOKIE
+// THIS IS FOR AUTHENTICATION, SUCH AS THE SERVER GEOLOCATION, WHICH NEEDS AUTHENTICATION
+// IN THE PAST, IT USED ANOTHER SYSTEM THAT DIDNT REQUIRE YOUR COOKIE,
+// BUT ROBLOX, AS ALWAYS, RELEASED A BREAKING CHANGE THAT BROKE EVERY COOKIE THAT I HAD FOR THAT ENDPOINT, MAKING IT NOT WORK
+// IF I FIND A SOLUTION, I WILL CHANGE IT SO IT DOESNT SEND YOUR COOKIE
+
+// ALSO, YOUR COOKIE IS NOT STORED ANYWHERE. THE API IS OPEN SOURCE IF YOU WANT TO CHECK IT
+
+async function fetchWithXsrf(url, options = {}) {
+    let response = await fetch(url, {
+        ...options,
+        credentials: "include"
+    });
+    
+    if (response.status === 403) {
+        const xsrfToken = response.headers.get("x-csrf-token");
+        if (xsrfToken) {
+            response = await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: {
+                    ...options.headers,
+                    "x-csrf-token": xsrfToken
+                }
+            });
+        }
+    }
+    
+    return response;
+}
+
 async function getFriends(userId) {
     let friend_list = []
     let next_cursor = ""
@@ -214,6 +247,7 @@ async function getUsersThumbnailFromTokens(tokens) {
 }
 
 async function joinInstanceInfo(placeId, serverIds) {
+    let cookie = await getCookie()
     const r = await fetch(`https://api-servers.juliozapatahernandez2006.workers.dev/join-game-instance?_extreq`, {
         method: "POST",
         headers: {
@@ -222,7 +256,8 @@ async function joinInstanceInfo(placeId, serverIds) {
         },
         body: JSON.stringify({
             "placeId": placeId,
-            "serverIds": serverIds
+            "serverIds": serverIds,
+            "roblosecurity": cookie
         })
     })
     const data = await r.json()
@@ -307,4 +342,21 @@ async function getBadgesAwardDate(badgeIds) {
     const data = await r.json()
 
     return data.data
+}
+
+async function getProfileInsights(userIds) {
+    const r = await fetchWithXsrf(`https://apis.roblox.com/profile-insights-api/v1/multiProfileInsights`, {
+        method: "POST",
+        headers: {
+            "accept": "application/json",
+            "content-type": "application/json"
+        },
+        body: JSON.stringify({
+            "userIds": userIds,
+            "rankingStrategy": "tc_info_boost"
+        })
+    });
+
+    const data = await r.json();
+    return data.userInsights[0]?.profileInsights
 }
