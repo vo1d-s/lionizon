@@ -39,7 +39,7 @@
 
             log(`Product Updated: ${productId} | Price: ${price} | Type: ${productType}`);
 
-            observeAdded(".unified-purchase-dialog-content", async (dialog) => {
+            observeAdded(".foundation-web-dialog-content", async (dialog) => {
                 const saved_settings = await loadData("lionizon_settings", { save_method_placeid: null })
                 await saveData({ lionizon_settings: saved_settings })
                 
@@ -144,7 +144,7 @@
                         </div>
                     </div>
                     `
-                    
+
                     document.body.insertAdjacentHTML("beforeend", saveDialogHTML)
                     const saveDialog = document.querySelector(".lionizon-save-dialog")
 
